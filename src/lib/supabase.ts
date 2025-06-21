@@ -39,6 +39,10 @@ export interface User {
   current_points: number
   current_rank: number
   referral_code?: string
+  x_connected_at?: string
+  is_active?: boolean
+  kinde_user_id?: string
+  points?: number
 }
 
 export interface Task {
@@ -82,17 +86,6 @@ export interface Referral {
   expires_at?: string
 }
 
-export interface ReferralClick {
-  id: string
-  referral_code: string
-  referrer_id?: string
-  ip_address?: string
-  user_agent?: string
-  clicked_at: string
-  converted: boolean
-  converted_user_id?: string
-}
-
 // Social media integration functions
 export const getSocialConnections = async (userId: string): Promise<SocialConnection[]> => {
   const { data, error } = await supabase
@@ -112,9 +105,11 @@ export const getSocialConnections = async (userId: string): Promise<SocialConnec
 export const createSocialConnection = async (connection: Omit<SocialConnection, 'id' | 'connected_at'>): Promise<SocialConnection> => {
   const { data, error } = await supabase
     .from('social_connections')
-    .insert({
+    .upsert({
       ...connection,
       connected_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id,platform'
     })
     .select()
     .single()
@@ -217,7 +212,7 @@ export const getReferralByUserId = async (userId: string): Promise<Referral | nu
   return data
 }
 
-// New function to process referral from code with proper error handling
+// Process referral from code with proper error handling
 export const processReferralFromCode = async (referralCode: string, newUserId: string): Promise<{ success: boolean; error?: string; referral_id?: string; message?: string }> => {
   try {
     console.log('Processing referral code:', referralCode, 'for user:', newUserId)
@@ -225,23 +220,14 @@ export const processReferralFromCode = async (referralCode: string, newUserId: s
     // Clean the referral code to only contain A-Z and 0-9
     const cleanCode = referralCode.toUpperCase().replace(/[^A-Z0-9]/g, '')
     
-    // Call the database function with the correct parameter names
+    // Call the database function
     const { data, error } = await supabase.rpc('process_referral_from_code', {
-      referral_code_param: cleanCode,
-      new_user_id_param: newUserId
+      p_referral_code: cleanCode,
+      p_new_user_id: newUserId
     })
 
     if (error) {
       console.error('Database error processing referral code:', error)
-      
-      // Handle specific database errors
-      if (error.message.includes('function process_referral_from_code')) {
-        return { 
-          success: false, 
-          error: 'Referral system is temporarily unavailable. Please try again later.' 
-        }
-      }
-      
       return { 
         success: false, 
         error: error.message || 'Failed to process referral code' 
@@ -250,7 +236,7 @@ export const processReferralFromCode = async (referralCode: string, newUserId: s
 
     console.log('Referral processing result:', data)
     
-    // Handle the case where data is null
+    // Handle the response
     if (data === null || data === undefined) {
       console.warn('Database function returned null/undefined')
       return { 
@@ -259,40 +245,8 @@ export const processReferralFromCode = async (referralCode: string, newUserId: s
       }
     }
     
-    // If data is a string, try to parse it as JSON
-    if (typeof data === 'string') {
-      try {
-        const parsedData = JSON.parse(data)
-        return parsedData
-      } catch (parseError) {
-        console.error('Failed to parse referral response:', parseError)
-        return { 
-          success: false, 
-          error: 'Invalid response format from referral processing' 
-        }
-      }
-    }
-    
-    // If data is already an object, validate it has the expected structure
-    if (typeof data === 'object' && data !== null) {
-      // Ensure the response has the expected success field
-      if ('success' in data) {
-        return data as { success: boolean; error?: string; referral_id?: string; message?: string }
-      } else {
-        console.warn('Response missing success field:', data)
-        return { 
-          success: false, 
-          error: 'Invalid response structure from referral processing' 
-        }
-      }
-    }
-    
-    // Fallback for unexpected data types
-    console.warn('Unexpected data type from database function:', typeof data, data)
-    return { 
-      success: false, 
-      error: 'Unexpected response format from referral processing' 
-    }
+    // Return the data as-is since it should be a JSON object
+    return data as { success: boolean; error?: string; referral_id?: string; message?: string }
   } catch (error) {
     console.error('Error processing referral from code:', error)
     return { 

@@ -20,7 +20,7 @@ const TasksMenu: React.FC = () => {
       description: 'Join our official Telegram community',
       points: 50,
       type: 'telegram',
-      link: 'https://t.me/your_telegram_group'
+      link: 'https://t.me/pumpeddotfun'
     },
     {
       id: 'follow_x',
@@ -36,7 +36,7 @@ const TasksMenu: React.FC = () => {
       description: 'Repost our latest launch announcement',
       points: 75,
       type: 'x',
-      link: 'https://x.com/pumpeddotfun/status/your_launch_post_id'
+      link: 'https://x.com/pumpeddotfun/status/123456789'
     }
   ];
 

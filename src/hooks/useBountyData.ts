@@ -161,7 +161,7 @@ export const useBountyData = (userId: string) => {
 
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
 
-      // Define available tasks
+      // Define available tasks (hardcoded since we removed admin_tasks table)
       const allTasks: BountyTask[] = [
         {
           id: 'join_telegram',
@@ -202,8 +202,6 @@ export const useBountyData = (userId: string) => {
       const updatedTasks = allTasks.map(task => {
         // Check if task is completed based on social connections
         if (task.platform === 'x' && connectedPlatforms.includes('x')) {
-          // For X tasks, we'll mark them as completed if user has X connected
-          // In a real implementation, you'd check actual completion via API
           return { ...task, status: 'completed' as const }
         }
         if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
@@ -264,7 +262,7 @@ export const useBountyData = (userId: string) => {
             completed: [...prev.completed, { ...task, status: 'completed' }]
           }))
 
-          // Award points
+          // Award points using the increment function
           const { error: pointsError } = await supabase.rpc('increment_user_points', {
             user_id_param: userId,
             points_to_add: task.points
@@ -272,19 +270,6 @@ export const useBountyData = (userId: string) => {
 
           if (pointsError) {
             console.warn('Failed to award points:', pointsError)
-            // Fallback: update points manually
-            const { data: user } = await supabase
-              .from('users')
-              .select('current_points')
-              .eq('id', userId)
-              .single()
-
-            if (user) {
-              await supabase
-                .from('users')
-                .update({ current_points: (user.current_points || 0) + task.points })
-                .eq('id', userId)
-            }
           }
 
           // Refresh user stats
