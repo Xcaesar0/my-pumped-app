@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react'
+import React, { useState } from 'react'
 import { useWeb3Modal } from '@web3modal/wagmi/react'
 import { useAccount } from 'wagmi'
 import { useUser } from '../hooks/useUser'
@@ -117,7 +117,7 @@ const Hero = () => {
           </div>
           <div className="px-2 flex justify-center">
             <FuzzyText
-              fontSize="clamp(2.5rem, 12vw, 6rem)"
+              fontSize="clamp(3.5rem, 16vw, 8rem)"
               fontWeight={700}
               color="#ffffff"
               enableHover={true}
