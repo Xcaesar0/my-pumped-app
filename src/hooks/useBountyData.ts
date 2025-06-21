@@ -23,27 +23,9 @@ export interface LeaderboardData {
   }>
 }
 
-export interface BountyTask {
-  id: string
-  title: string
-  description: string
-  platform: 'x' | 'telegram' | 'general'
-  points: number
-  status: 'not_started' | 'in_progress' | 'verifying' | 'completed'
-  action_url?: string
-  verification_type: 'manual' | 'api' | 'social'
-  requires_connection?: boolean
-}
-
-export interface BountyTasksData {
-  active: BountyTask[]
-  completed: BountyTask[]
-}
-
 export const useBountyData = (userId: string) => {
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardData>({ referrers: [], points: [] })
-  const [bountyTasks, setBountyTasks] = useState<BountyTasksData>({ active: [], completed: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -60,8 +42,7 @@ export const useBountyData = (userId: string) => {
     try {
       await Promise.all([
         loadUserStats(),
-        loadLeaderboard(),
-        loadBountyTasks()
+        loadLeaderboard()
       ])
     } catch (err) {
       console.error('Error loading bounty data:', err)
@@ -145,155 +126,6 @@ export const useBountyData = (userId: string) => {
     }
   }
 
-  const loadBountyTasks = async () => {
-    if (!userId || userId === 'undefined') {
-      console.warn('Invalid userId provided to loadBountyTasks')
-      return
-    }
-
-    try {
-      // Check user's social connections
-      const { data: socialConnections } = await supabase
-        .from('social_connections')
-        .select('platform')
-        .eq('user_id', userId)
-        .eq('is_active', true)
-
-      const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
-
-      // Define available tasks (hardcoded since we removed admin_tasks table)
-      const allTasks: BountyTask[] = [
-        {
-          id: 'join_telegram',
-          title: 'Join Telegram',
-          description: 'Join our official Telegram community',
-          platform: 'telegram',
-          points: 50,
-          status: 'not_started',
-          action_url: 'https://t.me/pumpeddotfun',
-          verification_type: 'manual',
-          requires_connection: true
-        },
-        {
-          id: 'follow_x',
-          title: 'Follow @pumpeddotfun',
-          description: 'Follow @pumpeddotfun on X (Twitter)',
-          platform: 'x',
-          points: 50,
-          status: 'not_started',
-          action_url: 'https://x.com/pumpeddotfun',
-          verification_type: 'api',
-          requires_connection: true
-        },
-        {
-          id: 'repost_launch',
-          title: 'Repost Launch Post',
-          description: 'Repost our latest launch announcement',
-          platform: 'x',
-          points: 75,
-          status: 'not_started',
-          action_url: 'https://x.com/pumpeddotfun/status/123456789',
-          verification_type: 'api',
-          requires_connection: true
-        }
-      ]
-
-      // Update task statuses based on user's connections and completion
-      const updatedTasks = allTasks.map(task => {
-        // Check if task is completed based on social connections
-        if (task.platform === 'x' && connectedPlatforms.includes('x')) {
-          return { ...task, status: 'completed' as const }
-        }
-        if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
-          return { ...task, status: 'completed' as const }
-        }
-        return task
-      })
-
-      setBountyTasks({
-        active: updatedTasks.filter(task => task.status !== 'completed'),
-        completed: updatedTasks.filter(task => task.status === 'completed')
-      })
-    } catch (error) {
-      console.error('Error loading bounty tasks:', error)
-      throw error
-    }
-  }
-
-  const beginTask = async (taskId: string) => {
-    try {
-      setBountyTasks(prev => ({
-        ...prev,
-        active: prev.active.map(task =>
-          task.id === taskId ? { ...task, status: 'in_progress' } : task
-        )
-      }))
-
-      // Find the task and open its action URL
-      const task = bountyTasks.active.find(t => t.id === taskId)
-      if (task?.action_url) {
-        window.open(task.action_url, '_blank')
-      }
-    } catch (error) {
-      console.error('Error beginning task:', error)
-    }
-  }
-
-  const verifyTask = async (taskId: string) => {
-    try {
-      setBountyTasks(prev => ({
-        ...prev,
-        active: prev.active.map(task =>
-          task.id === taskId ? { ...task, status: 'verifying' } : task
-        )
-      }))
-
-      // Simulate verification delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      // Mock verification - in production, this would check actual completion
-      const isCompleted = Math.random() > 0.3 // 70% success rate for demo
-
-      if (isCompleted) {
-        const task = bountyTasks.active.find(t => t.id === taskId)
-        if (task) {
-          setBountyTasks(prev => ({
-            active: prev.active.filter(t => t.id !== taskId),
-            completed: [...prev.completed, { ...task, status: 'completed' }]
-          }))
-
-          // Award points using the increment function
-          const { error: pointsError } = await supabase.rpc('increment_user_points', {
-            user_id_param: userId,
-            points_to_add: task.points
-          })
-
-          if (pointsError) {
-            console.warn('Failed to award points:', pointsError)
-          }
-
-          // Refresh user stats
-          await loadUserStats()
-        }
-      } else {
-        setBountyTasks(prev => ({
-          ...prev,
-          active: prev.active.map(task =>
-            task.id === taskId ? { ...task, status: 'in_progress' } : task
-          )
-        }))
-      }
-    } catch (error) {
-      console.error('Error verifying task:', error)
-      setBountyTasks(prev => ({
-        ...prev,
-        active: prev.active.map(task =>
-          task.id === taskId ? { ...task, status: 'in_progress' } : task
-        )
-      }))
-    }
-  }
-
   const refreshData = async () => {
     await loadAllData()
   }
@@ -301,11 +133,8 @@ export const useBountyData = (userId: string) => {
   return {
     userStats,
     leaderboard,
-    bountyTasks,
     loading,
     error,
-    refreshData,
-    beginTask,
-    verifyTask
+    refreshData
   }
 }

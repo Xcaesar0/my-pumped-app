@@ -43,7 +43,6 @@ import SocialConnectionRequiredModal from './SocialConnectionRequiredModal'
 import UserProfile from './UserProfile'
 import ReferralCodeInput from './ReferralCodeInput'
 import TelegramIcon from './icons/TelegramIcon'
-import XIcon from './icons/XIcon'
 import ProfileSettingsModal from './ProfileSettingsModal'
 
 interface BountyHunterDashboardProps {
@@ -58,12 +57,9 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
 
   const {
     leaderboard,
-    bountyTasks,
     userStats,
     loading,
-    refreshData,
-    beginTask,
-    verifyTask
+    refreshData
   } = useBountyData(user.id)
 
   const { getConnectionByPlatform } = useSocialConnections(user.id)
@@ -83,27 +79,6 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
       setTimeout(() => setCopiedReferral(false), 2000)
     } catch (err) {
       console.error('Failed to copy referral code:', err)
-    }
-  }
-
-  const handleTaskAction = async (taskId: string, platform?: 'telegram' | 'x' | 'general') => {
-    const task = bountyTasks.active.find(t => t.id === taskId)
-    
-    if (task?.requires_connection && (platform === 'telegram' || platform === 'x')) {
-      const connection = getConnectionByPlatform(platform)
-      
-      if (!connection) {
-        // Show connection required modal
-        setShowConnectionModal(platform)
-        return
-      }
-    }
-
-    // If task is not started, begin it
-    if (task?.status === 'not_started') {
-      await beginTask(taskId)
-    } else if (task?.status === 'in_progress') {
-      await verifyTask(taskId)
     }
   }
 
@@ -144,17 +119,6 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     }
   }
 
-  const getTaskIcon = (task: BountyTask) => {
-    switch (task.platform) {
-      case 'telegram':
-        return <TelegramIcon className="w-5 h-5 text-blue-400" />
-      case 'x':
-        return <XIcon className="w-5 h-5 text-white" />
-      default:
-        return <HelpCircle className="w-5 h-5 text-gray-400" />
-    }
-  }
-
   return (
     <>
       <div className="min-h-screen px-4 sm:px-6 py-8" style={{ backgroundColor: '#1A1A1A' }}>
@@ -173,7 +137,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
           </div>
 
           {/* Main Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 lg:gap-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-6 lg:gap-8 mb-8">
             {/* Left Column: Global Leaderboard */}
             <div className="lg:col-span-2 order-2 lg:order-1">
               <div className="rounded-2xl border border-gray-700/50 overflow-hidden h-full" style={{ backgroundColor: '#171717' }}>
@@ -266,7 +230,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
               </div>
             </div>
 
-            {/* Middle Column: Your Stats & Referral */}
+            {/* Right Column: Your Stats & Referral */}
             <div className="lg:col-span-3 order-1 lg:order-2 space-y-6">
               {/* Merged Stats and Referral Section */}
               <div className="rounded-2xl border border-gray-700/50 p-6" style={{ backgroundColor: '#171717' }}>
@@ -354,81 +318,6 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                     onSuccess={handleReferralSuccess}
                   />
                 )}
-              </div>
-            </div>
-
-            {/* Right Column: Tasks */}
-            <div className="lg:col-span-2 order-3 lg:order-3">
-              <div className="rounded-2xl border border-gray-700/50 h-full" style={{ backgroundColor: '#171717' }}>
-                <div className="p-6 border-b border-gray-700/50">
-                  <div className="flex items-center space-x-3">
-                    <Target className="w-5 h-5 text-green-400" />
-                    <h2 className="text-xl font-bold text-white">Active Tasks</h2>
-                  </div>
-                </div>
-
-                <div className="p-6">
-                  {loading ? (
-                    <div className="text-center py-8">
-                      <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full mx-auto mb-4" style={{ borderColor: '#52D593', borderTopColor: 'transparent' }}></div>
-                      <p className="text-gray-400 text-sm">Loading tasks...</p>
-                    </div>
-                  ) : bountyTasks.active.length > 0 ? (
-                    <div className="space-y-4">
-                      {bountyTasks.active.map((task) => (
-                        <div
-                          key={task.id}
-                          className="p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                              {getTaskIcon(task)}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-white mb-1">{task.title}</h3>
-                              <p className="text-xs text-gray-400 mb-3">{task.description}</p>
-                              
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                  <span className="text-xs text-gray-400">
-                                    {task.points} points
-                                  </span>
-                                  <div className="flex items-center space-x-1">
-                                    {getTaskIcon(task)}
-                                    <span className="text-xs text-blue-400">
-                                      {task.platform === 'telegram' && 'Telegram'}
-                                      {task.platform === 'x' && 'X (Twitter)'}
-                                    </span>
-                                  </div>
-                                </div>
-                                
-                                <button
-                                  onClick={() => handleTaskAction(task.id, task.requires_connection ? task.platform : undefined)}
-                                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200 ${
-                                    task.status === 'not_started'
-                                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                  }`}
-                                >
-                                  {task.status === 'not_started' ? 'Start' : 'Verify'}
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-white mb-2">No Active Tasks</h3>
-                      <p className="text-gray-400 text-sm">
-                        Complete more activities to unlock new tasks.
-                      </p>
-                    </div>
-                  )}
-                </div>
               </div>
             </div>
           </div>
