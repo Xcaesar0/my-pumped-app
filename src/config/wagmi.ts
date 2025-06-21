@@ -4,8 +4,13 @@ import { mainnet, arbitrum, polygon } from 'wagmi/chains'
 // Get projectId from environment variables
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
 
-if (!projectId || projectId === 'your_project_id_here') {
-  console.warn('WalletConnect Project ID is not configured. Please visit https://cloud.walletconnect.com to get your Project ID and update your .env file.')
+if (!projectId || projectId === 'your_project_id_here' || projectId.trim() === '') {
+  throw new Error(
+    'WalletConnect Project ID is required. Please:\n' +
+    '1. Visit https://cloud.walletconnect.com\n' +
+    '2. Create a project and get your Project ID\n' +
+    '3. Add VITE_WALLETCONNECT_PROJECT_ID=your_actual_project_id to your .env file'
+  )
 }
 
 // Create wagmiConfig
@@ -18,13 +23,8 @@ const metadata = {
 
 const chains = [mainnet, arbitrum, polygon] as const
 
-// Use a fallback project ID if none is provided to prevent initialization errors
-const effectiveProjectId = projectId && projectId !== 'your_project_id_here' && projectId.length > 0 
-  ? projectId 
-  : 'fallback-project-id'
-
 export const config = defaultWagmiConfig({
   chains,
-  projectId: effectiveProjectId,
+  projectId,
   metadata,
 })
