@@ -14,22 +14,24 @@ import { supabase } from './lib/supabase'
 // Get projectId from environment variables
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
 
-// Only create Web3Modal if we have a valid project ID
-const hasValidProjectId = projectId && projectId !== 'your_project_id_here' && projectId.length > 0
+// Always create Web3Modal, using a fallback project ID if needed
+const effectiveProjectId = projectId && projectId !== 'your_project_id_here' && projectId.length > 0 
+  ? projectId 
+  : 'fallback-project-id'
 
-if (hasValidProjectId) {
-  try {
-    createWeb3Modal({
-      wagmiConfig: config,
-      projectId: projectId,
-      enableAnalytics: true,
-      enableOnramp: true
-    })
-  } catch (error) {
-    console.error('Failed to create Web3Modal:', error)
-  }
-} else {
-  console.warn('WalletConnect Project ID is not configured. Wallet connection features will be disabled. Please visit https://cloud.walletconnect.com to get your Project ID and update your .env file.')
+try {
+  createWeb3Modal({
+    wagmiConfig: config,
+    projectId: effectiveProjectId,
+    enableAnalytics: true,
+    enableOnramp: true
+  })
+} catch (error) {
+  console.error('Failed to create Web3Modal:', error)
+}
+
+if (!projectId || projectId === 'your_project_id_here') {
+  console.warn('WalletConnect Project ID is not configured. Wallet connection features may be limited. Please visit https://cloud.walletconnect.com to get your Project ID and update your .env file.')
 }
 
 // Create a client

@@ -18,16 +18,13 @@ const metadata = {
 
 const chains = [mainnet, arbitrum, polygon] as const
 
-// Only create config if we have a valid project ID
-const hasValidProjectId = projectId && projectId !== 'your_project_id_here' && projectId.length > 0
+// Use a fallback project ID if none is provided to prevent initialization errors
+const effectiveProjectId = projectId && projectId !== 'your_project_id_here' && projectId.length > 0 
+  ? projectId 
+  : 'fallback-project-id'
 
-export const config = hasValidProjectId ? defaultWagmiConfig({
+export const config = defaultWagmiConfig({
   chains,
-  projectId: projectId,
+  projectId: effectiveProjectId,
   metadata,
-}) : defaultWagmiConfig({
-  chains,
-  projectId: '', // Empty string to prevent RPC calls
-  metadata,
-  enableWalletConnect: false, // Disable WalletConnect entirely if no valid project ID
 })
