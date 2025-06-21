@@ -3,7 +3,6 @@ import { createWeb3Modal } from '@web3modal/wagmi/react'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { config } from './config/wagmi'
-import { useReferralPersistence } from './hooks/useReferralPersistence'
 import { useSocialConnections } from './hooks/useSocialConnections'
 import { useUser } from './hooks/useUser'
 import Header from './components/Header';
@@ -39,9 +38,6 @@ const queryClient = new QueryClient()
 function AppContent() {
   const { user } = useUser()
   const { addConnection, loadConnections } = useSocialConnections(user?.id || null)
-
-  // Initialize referral persistence on app load
-  useReferralPersistence()
   
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
@@ -49,11 +45,11 @@ function AppContent() {
         if(user && session.provider_token) {
           // This likely means a new OAuth connection has been made
           await addConnection({
+            user_id: user.id,
             platform: session.user.app_metadata.provider as 'telegram' | 'x',
             platform_user_id: session.user.id,
             platform_username: session.user.user_metadata.user_name,
-            access_token: session.provider_token,
-            refresh_token: session.provider_refresh_token,
+            is_active: true
           })
         }
         // Always reload connections on auth change

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react'
-import { useAccount } from 'wagmi'
+import { useAccount, useDisconnect } from 'wagmi'
 import { supabase, User, processReferralFromCode, trackReferralClick } from '../lib/supabase'
 import { generateUsername } from '../utils/username'
-import { useReferralPersistence } from './useReferralPersistence'
+import { useReferralInfo } from './useReferralInfo'
 
 export const useUser = () => {
   const { address, isConnected } = useAccount()
@@ -11,7 +11,7 @@ export const useUser = () => {
   const [error, setError] = useState<string | null>(null)
   const [showReferralModal, setShowReferralModal] = useState(false)
   const [isNewUser, setIsNewUser] = useState(false)
-  const { getPendingReferral, clearPendingReferral } = useReferralPersistence()
+  const { referralCode, clearReferralInfo } = useReferralInfo()
 
   useEffect(() => {
     if (isConnected && address) {
@@ -112,7 +112,7 @@ export const useUser = () => {
       // Only show referral modal for new users who don't have a pending referral and haven't used a code
       if (userIsNew) {
         const hasExistingReferral = await checkExistingReferral(finalUser.id)
-        const pendingReferral = getPendingReferral()
+        const pendingReferral = referralCode
         
         if (!pendingReferral && !hasExistingReferral) {
           setShowReferralModal(true)
@@ -148,7 +148,7 @@ export const useUser = () => {
   }
 
   const processReferralIfPending = async (userId: string) => {
-    const pendingReferral = getPendingReferral()
+    const pendingReferral = referralCode
     if (pendingReferral) {
       try {
         console.log('Processing pending referral:', pendingReferral)
@@ -173,12 +173,12 @@ export const useUser = () => {
         }
         
         // Clear the pending referral regardless of success/failure
-        clearPendingReferral()
+        clearReferralInfo()
         
       } catch (refError) {
         console.warn('Failed to process referral:', refError)
         // Clear the pending referral even if processing fails
-        clearPendingReferral()
+        clearReferralInfo()
       }
     }
   }
