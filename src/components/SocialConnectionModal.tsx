@@ -37,6 +37,7 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
   
   const [authStatus, setAuthStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
   
   const scriptRef = useRef<HTMLScriptElement | null>(null)
   const connection = getConnectionByPlatform(platform)
@@ -52,14 +53,15 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
 
   const config = platformConfig[platform]
 
-  useEffect(() => {
-    if (authStatus !== 'idle') return
-
+  const loadTelegramWidget = () => {
     // Clean up any existing script first
     const existingScript = document.querySelector('script[src*="telegram-widget"]')
     if (existingScript) {
       existingScript.remove()
     }
+
+    // Clean up existing global callback
+    delete window.onTelegramAuth
 
     // Inject the Telegram login script
     const script = document.createElement('script')
@@ -70,11 +72,30 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
     script.setAttribute('data-onauth', 'onTelegramAuth(user)')
     script.setAttribute('data-request-access', 'write')
     
+    // Add error handling for script loading
+    script.onerror = () => {
+      console.error('Failed to load Telegram widget script')
+      setError('Failed to load Telegram authentication widget. Please try again.')
+      setAuthStatus('error')
+    }
+    
     // Find the placeholder and append the script
     const placeholder = document.getElementById('telegram-login-placeholder')
     if (placeholder) {
+      // Clear placeholder first
+      placeholder.innerHTML = ''
       placeholder.appendChild(script)
       scriptRef.current = script
+    } else {
+      console.error('Telegram login placeholder not found')
+      setError('Authentication widget container not found. Please refresh and try again.')
+      setAuthStatus('error')
+    }
+  }
+
+  useEffect(() => {
+    if (authStatus === 'idle') {
+      loadTelegramWidget()
     }
 
     return () => {
@@ -84,15 +105,14 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
       }
       delete window.onTelegramAuth
     }
-  }, [authStatus])
+  }, [authStatus, retryCount])
 
   const handleTelegramAuth = async (telegramUser: TelegramUser) => {
+    console.log('Telegram auth callback triggered:', telegramUser)
     setAuthStatus('loading')
     setError(null)
     
     try {
-      console.log('Telegram auth data received:', telegramUser)
-      
       // Verify the authentication data
       const verification = verifyTelegramAuth(telegramUser)
       
@@ -100,20 +120,48 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
         throw new Error(verification.error || 'Telegram authentication verification failed')
       }
 
-      // Create the social connection
-      await addConnection({
-        platform: 'telegram',
+      console.log('Creating social connection for user:', user.id)
+
+      // Create the social connection with proper error handling
+      const connectionData = {
+        platform: 'telegram' as const,
         platform_user_id: telegramUser.id.toString(),
-        platform_username: telegramUser.username || telegramUser.first_name,
+        platform_username: telegramUser.username || telegramUser.first_name || `user_${telegramUser.id}`,
         user_id: user.id,
         is_active: true
-      })
+      }
+
+      console.log('Connection data:', connectionData)
+
+      const newConnection = await addConnection(connectionData)
+      console.log('Connection created successfully:', newConnection)
       
       setAuthStatus('success')
-      setTimeout(onClose, 2000)
+      
+      // Close modal after a short delay to show success message
+      setTimeout(() => {
+        onClose()
+      }, 2000)
+      
     } catch (err) {
       console.error('Telegram auth error:', err)
-      setError(err instanceof Error ? err.message : 'An unknown error occurred.')
+      
+      // Provide more specific error messages
+      let errorMessage = 'An unknown error occurred.'
+      
+      if (err instanceof Error) {
+        if (err.message.includes('duplicate key')) {
+          errorMessage = 'This Telegram account is already connected to another user.'
+        } else if (err.message.includes('foreign key')) {
+          errorMessage = 'User account not found. Please refresh and try again.'
+        } else if (err.message.includes('verification')) {
+          errorMessage = 'Telegram authentication verification failed. Please try again.'
+        } else {
+          errorMessage = err.message
+        }
+      }
+      
+      setError(errorMessage)
       setAuthStatus('error')
     }
   }
@@ -128,14 +176,20 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
   
   const handleDisconnect = async () => {
     if (connection) {
-      await removeConnection(connection.id)
-      onClose()
+      try {
+        await removeConnection(connection.id)
+        onClose()
+      } catch (err) {
+        console.error('Error disconnecting:', err)
+        setError('Failed to disconnect. Please try again.')
+      }
     }
   }
 
   const handleRetry = () => {
     setAuthStatus('idle')
     setError(null)
+    setRetryCount(prev => prev + 1)
   }
 
   return (
@@ -176,7 +230,7 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
               <button
                 onClick={handleDisconnect}
                 disabled={connectionsLoading}
-                className="w-full px-4 py-2 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30"
+                className="w-full px-4 py-2 bg-red-600/20 text-red-400 rounded-lg hover:bg-red-600/30 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200"
               >
                 {connectionsLoading ? 'Disconnecting...' : 'Disconnect'}
               </button>
@@ -184,7 +238,11 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
           ) : (
             <div className="space-y-4">
               {authStatus === 'idle' && (
-                <div id="telegram-login-placeholder" className="flex justify-center"></div>
+                <div>
+                  <div id="telegram-login-placeholder" className="flex justify-center min-h-[50px] items-center">
+                    <div className="text-gray-400 text-sm">Loading Telegram widget...</div>
+                  </div>
+                </div>
               )}
 
               {authStatus === 'loading' && (
@@ -198,6 +256,7 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
                 <div className="p-4 rounded-lg bg-green-500/10 text-center">
                   <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
                   <p className="text-green-400">Successfully connected!</p>
+                  <p className="text-sm text-gray-400 mt-1">Closing in a moment...</p>
                 </div>
               )}
 
@@ -216,9 +275,11 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
                 </div>
               )}
 
-              <p className="text-xs text-gray-500 text-center">
-                {config.instructions}
-              </p>
+              {authStatus === 'idle' && (
+                <p className="text-xs text-gray-500 text-center">
+                  {config.instructions}
+                </p>
+              )}
             </div>
           )}
 

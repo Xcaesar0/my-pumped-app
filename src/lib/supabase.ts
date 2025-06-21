@@ -103,6 +103,8 @@ export const getSocialConnections = async (userId: string): Promise<SocialConnec
 }
 
 export const createSocialConnection = async (connection: Omit<SocialConnection, 'id' | 'connected_at'>): Promise<SocialConnection> => {
+  console.log('Creating social connection:', connection)
+  
   const { data, error } = await supabase
     .from('social_connections')
     .upsert({
@@ -116,9 +118,10 @@ export const createSocialConnection = async (connection: Omit<SocialConnection, 
 
   if (error) {
     console.error('Error creating social connection:', error)
-    throw new Error(error.message)
+    throw new Error(`Failed to create social connection: ${error.message}`)
   }
 
+  console.log('Social connection created successfully:', data)
   return data
 }
 
