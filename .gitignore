@@ -1,0 +1,22 @@
+# Dependencies
+/node_modules
+
+# Vite
+/dist
+/.vite/
+/coverage/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env*.local
+
+# IDEs and editors
+.idea
+.vscode/
+*.swp
