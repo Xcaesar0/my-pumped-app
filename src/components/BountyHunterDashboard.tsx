@@ -394,13 +394,10 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                                   <span className="text-xs text-gray-400">
                                     {task.points} points
                                   </span>
-                                  <div className="flex items-center space-x-1">
-                                    {getTaskIcon(task)}
-                                    <span className="text-xs text-blue-400">
-                                      {task.platform === 'telegram' && 'Telegram'}
-                                      {task.platform === 'x' && 'X (Twitter)'}
-                                    </span>
-                                  </div>
+                                  <span className="text-xs text-gray-400">
+                                    {task.platform === 'telegram' && 'Telegram'}
+                                    {task.platform === 'x' && 'X (Twitter)'}
+                                  </span>
                                 </div>
                                 
                                 <button
