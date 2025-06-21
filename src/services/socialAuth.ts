@@ -105,18 +105,7 @@ export const updateUsername = async (userId: string, newUsername: string) => {
   return data
 }
 
+// X Auth is now disabled - show development message
 export const initiateXAuth = async () => {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'twitter',
-    options: {
-      redirectTo: window.location.origin
-    },
-  })
-
-  if (error) {
-    console.error('Error initiating X auth:', error)
-    throw new Error(error.message)
-  }
-
-  return data
+  throw new Error('X (Twitter) integration is currently under development. Please check back later!')
 }

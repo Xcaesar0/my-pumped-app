@@ -161,7 +161,7 @@ export const useBountyData = (userId: string) => {
 
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
 
-      // Define available tasks (hardcoded since we removed admin_tasks table)
+      // Define available tasks (X tasks no longer require connection)
       const allTasks: BountyTask[] = [
         {
           id: 'join_telegram',
@@ -182,8 +182,8 @@ export const useBountyData = (userId: string) => {
           points: 50,
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun',
-          verification_type: 'api',
-          requires_connection: true
+          verification_type: 'manual',
+          requires_connection: false // X tasks no longer require connection
         },
         {
           id: 'repost_launch',
@@ -193,20 +193,18 @@ export const useBountyData = (userId: string) => {
           points: 75,
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun/status/123456789',
-          verification_type: 'api',
-          requires_connection: true
+          verification_type: 'manual',
+          requires_connection: false // X tasks no longer require connection
         }
       ]
 
       // Update task statuses based on user's connections and completion
       const updatedTasks = allTasks.map(task => {
-        // Check if task is completed based on social connections
-        if (task.platform === 'x' && connectedPlatforms.includes('x')) {
-          return { ...task, status: 'completed' as const }
-        }
+        // Only Telegram tasks require connection now
         if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
           return { ...task, status: 'completed' as const }
         }
+        // X tasks are available to everyone
         return task
       })
 

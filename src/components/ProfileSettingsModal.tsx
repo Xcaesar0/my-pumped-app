@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { X, Settings, LogOut, Unlink } from 'lucide-react'
+import { X, Settings, LogOut, Unlink, AlertCircle } from 'lucide-react'
 import { User } from '../lib/supabase'
 import { useSocialConnections } from '../hooks/useSocialConnections'
 import { useDisconnect } from 'wagmi'
@@ -22,6 +22,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const { disconnect } = useDisconnect()
   
   const [socialModal, setSocialModal] = useState<'telegram' | null>(null)
+  const [showXMessage, setShowXMessage] = useState(false)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -39,11 +40,8 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleConnectX = async () => {
-    try {
-      await initiateXAuth()
-    } catch (error) {
-      console.error("Failed to initiate X auth:", error)
-    }
+    setShowXMessage(true)
+    setTimeout(() => setShowXMessage(false), 3000)
   }
   
   const XIcon = () => (
@@ -133,25 +131,23 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <XIcon />
                   <span className="text-sm font-medium text-white">X (Twitter)</span>
                 </div>
-                {connectionsLoading ? (
-                  <span className="text-xs text-gray-400">Loading...</span>
-                ) : xConnection ? (
-                  <button
-                    onClick={() => handleDisconnectSocial('x')}
-                    className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    <Unlink className="w-3 h-3" />
-                    <span>Disconnect</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleConnectX}
-                    className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
-                  >
-                    Connect
-                  </button>
-                )}
+                <button
+                  onClick={handleConnectX}
+                  className="px-3 py-1 text-xs font-medium bg-gray-600 text-white rounded-md hover:bg-gray-700"
+                >
+                  Connect
+                </button>
               </div>
+              
+              {/* Development Message */}
+              {showXMessage && (
+                <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
+                  <div className="flex items-center space-x-2">
+                    <AlertCircle className="w-4 h-4 text-orange-400" />
+                    <span className="text-sm text-orange-400">X integration is under development</span>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

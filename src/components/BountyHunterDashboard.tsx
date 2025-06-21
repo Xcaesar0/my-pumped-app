@@ -26,7 +26,8 @@ import {
   ArrowRight,
   User as UserIcon,
   Settings,
-  MoreVertical
+  MoreVertical,
+  AlertCircle
 } from 'lucide-react'
 import { User } from '../lib/supabase'
 import {
@@ -53,8 +54,9 @@ interface BountyHunterDashboardProps {
 const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) => {
   const [activeLeaderboardTab, setActiveLeaderboardTab] = useState<'referrers' | 'points'>('referrers')
   const [showProfileModal, setShowProfileModal] = useState(false)
-  const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | 'x' | null>(null)
+  const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | null>(null)
   const [copiedReferral, setCopiedReferral] = useState(false)
+  const [showXDevMessage, setShowXDevMessage] = useState(false)
 
   const {
     leaderboard,
@@ -89,7 +91,8 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
   const handleTaskAction = async (taskId: string, platform?: 'telegram' | 'x' | 'general') => {
     const task = bountyTasks.active.find(t => t.id === taskId)
     
-    if (task?.requires_connection && (platform === 'telegram' || platform === 'x')) {
+    // Only check for connection if it's a Telegram task that requires connection
+    if (task?.requires_connection && platform === 'telegram') {
       const connection = getConnectionByPlatform(platform)
       
       if (!connection) {
@@ -97,6 +100,12 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
         setShowConnectionModal(platform)
         return
       }
+    }
+
+    // For X tasks, show development message
+    if (platform === 'x') {
+      setShowXDevMessage(true)
+      setTimeout(() => setShowXDevMessage(false), 3000)
     }
 
     // If task is not started, begin it
@@ -107,7 +116,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     }
   }
 
-  const handleConnectSocial = (platform: 'telegram' | 'x') => {
+  const handleConnectSocial = (platform: 'telegram') => {
     setShowConnectionModal(null)
     setShowProfileModal(true)
   }
@@ -171,6 +180,20 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
               Complete social media tasks, invite friends, and climb the leaderboard to earn exclusive rewards
             </p>
           </div>
+
+          {/* Development Message for X Tasks */}
+          {showXDevMessage && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+              <div className="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <AlertCircle className="w-4 h-4" />
+                  <p className="text-sm font-medium">
+                    X (Twitter) integration is under development. Task opened in new tab!
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Main Dashboard Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 lg:gap-8 mb-8">
@@ -401,7 +424,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                                 </div>
                                 
                                 <button
-                                  onClick={() => handleTaskAction(task.id, task.requires_connection ? task.platform : undefined)}
+                                  onClick={() => handleTaskAction(task.id, task.platform)}
                                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200 ${
                                     task.status === 'not_started'
                                       ? 'bg-green-600 hover:bg-green-700 text-white'
