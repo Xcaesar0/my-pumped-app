@@ -26,8 +26,7 @@ import {
   ArrowRight,
   User as UserIcon,
   Settings,
-  MoreVertical,
-  XIcon
+  MoreVertical
 } from 'lucide-react'
 import { User } from '../lib/supabase'
 import {
@@ -44,6 +43,7 @@ import SocialConnectionRequiredModal from './SocialConnectionRequiredModal'
 import UserProfile from './UserProfile'
 import ReferralCodeInput from './ReferralCodeInput'
 import TelegramIcon from './icons/TelegramIcon'
+import XIcon from './icons/XIcon'
 import ProfileSettingsModal from './ProfileSettingsModal'
 
 interface BountyHunterDashboardProps {
