@@ -147,11 +147,11 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
   const getTaskIcon = (task: BountyTask) => {
     switch (task.platform) {
       case 'telegram':
-        return <TelegramIcon className="w-5 h-5 text-blue-400" />
+        return <TelegramIcon className="w-4 h-4 text-blue-400" />
       case 'x':
-        return <XIcon className="w-5 h-5 text-white" />
+        return <XIcon className="w-4 h-4 text-white" />
       default:
-        return <HelpCircle className="w-5 h-5 text-gray-400" />
+        return <HelpCircle className="w-4 h-4 text-gray-400" />
     }
   }
 
@@ -381,7 +381,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                           className="p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}
                         >
                           <div className="flex items-start space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                            <div className="w-8 h-8 rounded-full bg-gray-800/50 flex items-center justify-center flex-shrink-0">
                               {getTaskIcon(task)}
                             </div>
                             
