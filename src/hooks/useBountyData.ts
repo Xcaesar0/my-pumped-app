@@ -161,6 +161,10 @@ export const useBountyData = (userId: string) => {
 
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
 
+      // Get completed tasks from localStorage to persist across sessions
+      const completedTasksKey = `completed_tasks_${userId}`
+      const completedTaskIds = JSON.parse(localStorage.getItem(completedTasksKey) || '[]')
+
       // Define available tasks (X tasks no longer require connection)
       const allTasks: BountyTask[] = [
         {
@@ -200,10 +204,16 @@ export const useBountyData = (userId: string) => {
 
       // Update task statuses based on user's connections and completion
       const updatedTasks = allTasks.map(task => {
+        // Check if task is completed (from localStorage or social connections)
+        if (completedTaskIds.includes(task.id)) {
+          return { ...task, status: 'completed' as const }
+        }
+        
         // Only Telegram tasks require connection now
         if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
           return { ...task, status: 'completed' as const }
         }
+        
         // X tasks are available to everyone
         return task
       })
@@ -239,6 +249,9 @@ export const useBountyData = (userId: string) => {
 
   const verifyTask = async (taskId: string) => {
     try {
+      const task = bountyTasks.active.find(t => t.id === taskId)
+      if (!task) return
+
       setBountyTasks(prev => ({
         ...prev,
         active: prev.active.map(task =>
@@ -246,33 +259,60 @@ export const useBountyData = (userId: string) => {
         )
       }))
 
-      // Simulate verification delay
+      // For X tasks, automatically complete and award points
+      if (task.platform === 'x') {
+        // Award points using the increment function
+        const { error: pointsError } = await supabase.rpc('increment_user_points', {
+          user_id_param: userId,
+          points_to_add: task.points
+        })
+
+        if (pointsError) {
+          console.warn('Failed to award points:', pointsError)
+        }
+
+        // Move task to completed
+        setBountyTasks(prev => ({
+          active: prev.active.filter(t => t.id !== taskId),
+          completed: [...prev.completed, { ...task, status: 'completed' }]
+        }))
+
+        // Save completed task to localStorage
+        const completedTasksKey = `completed_tasks_${userId}`
+        const completedTaskIds = JSON.parse(localStorage.getItem(completedTasksKey) || '[]')
+        completedTaskIds.push(taskId)
+        localStorage.setItem(completedTasksKey, JSON.stringify(completedTaskIds))
+
+        // Refresh user stats to show updated points
+        await loadUserStats()
+        
+        return { success: true, pointsAwarded: task.points }
+      }
+
+      // For other tasks, simulate verification delay
       await new Promise(resolve => setTimeout(resolve, 2000))
 
       // Mock verification - in production, this would check actual completion
       const isCompleted = Math.random() > 0.3 // 70% success rate for demo
 
       if (isCompleted) {
-        const task = bountyTasks.active.find(t => t.id === taskId)
-        if (task) {
-          setBountyTasks(prev => ({
-            active: prev.active.filter(t => t.id !== taskId),
-            completed: [...prev.completed, { ...task, status: 'completed' }]
-          }))
+        setBountyTasks(prev => ({
+          active: prev.active.filter(t => t.id !== taskId),
+          completed: [...prev.completed, { ...task, status: 'completed' }]
+        }))
 
-          // Award points using the increment function
-          const { error: pointsError } = await supabase.rpc('increment_user_points', {
-            user_id_param: userId,
-            points_to_add: task.points
-          })
+        // Award points using the increment function
+        const { error: pointsError } = await supabase.rpc('increment_user_points', {
+          user_id_param: userId,
+          points_to_add: task.points
+        })
 
-          if (pointsError) {
-            console.warn('Failed to award points:', pointsError)
-          }
-
-          // Refresh user stats
-          await loadUserStats()
+        if (pointsError) {
+          console.warn('Failed to award points:', pointsError)
         }
+
+        // Refresh user stats
+        await loadUserStats()
       } else {
         setBountyTasks(prev => ({
           ...prev,

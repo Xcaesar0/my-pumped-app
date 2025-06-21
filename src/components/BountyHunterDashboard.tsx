@@ -57,6 +57,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
   const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | null>(null)
   const [copiedReferral, setCopiedReferral] = useState(false)
   const [showXDevMessage, setShowXDevMessage] = useState(false)
+  const [taskCompletionMessage, setTaskCompletionMessage] = useState<string | null>(null)
 
   const {
     leaderboard,
@@ -112,7 +113,13 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     if (task?.status === 'not_started') {
       await beginTask(taskId)
     } else if (task?.status === 'in_progress') {
-      await verifyTask(taskId)
+      const result = await verifyTask(taskId)
+      
+      // Show completion message for X tasks
+      if (result?.success && task.platform === 'x') {
+        setTaskCompletionMessage(`Task completed! You earned ${result.pointsAwarded} points.`)
+        setTimeout(() => setTaskCompletionMessage(null), 4000)
+      }
     }
   }
 
@@ -190,6 +197,18 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                   <p className="text-sm font-medium">
                     X (Twitter) integration is under development. Task opened in new tab!
                   </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Task Completion Message */}
+          {taskCompletionMessage && (
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
+              <div className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+                <div className="flex items-center space-x-2">
+                  <CheckCircle className="w-4 h-4" />
+                  <p className="text-sm font-medium">{taskCompletionMessage}</p>
                 </div>
               </div>
             </div>
@@ -428,10 +447,14 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                                   className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200 ${
                                     task.status === 'not_started'
                                       ? 'bg-green-600 hover:bg-green-700 text-white'
+                                      : task.status === 'verifying'
+                                      ? 'bg-gray-600 text-white cursor-not-allowed'
                                       : 'bg-blue-600 hover:bg-blue-700 text-white'
                                   }`}
+                                  disabled={task.status === 'verifying'}
                                 >
-                                  {task.status === 'not_started' ? 'Start' : 'Verify'}
+                                  {task.status === 'not_started' ? 'Start' : 
+                                   task.status === 'verifying' ? 'Verifying...' : 'Verify'}
                                 </button>
                               </div>
                             </div>
@@ -446,6 +469,34 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                       <p className="text-gray-400 text-sm">
                         Complete more activities to unlock new tasks.
                       </p>
+                    </div>
+                  )}
+
+                  {/* Completed Tasks Section */}
+                  {bountyTasks.completed.length > 0 && (
+                    <div className="mt-8">
+                      <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                        <CheckCircle className="w-5 h-5 text-green-400" />
+                        <span>Completed Tasks</span>
+                      </h3>
+                      <div className="space-y-3">
+                        {bountyTasks.completed.map((task) => (
+                          <div
+                            key={task.id}
+                            className="p-3 rounded-lg border border-green-500/30 bg-green-500/5"
+                          >
+                            <div className="flex items-center space-x-3">
+                              <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                                <CheckCircle className="w-4 h-4 text-green-400" />
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="text-sm font-medium text-white">{task.title}</h4>
+                                <p className="text-xs text-green-400">+{task.points} points earned</p>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
