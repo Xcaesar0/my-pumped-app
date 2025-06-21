@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { X, CheckCircle, AlertCircle } from 'lucide-react'
 import { User, SocialConnection } from '../lib/supabase'
 import { useSocialConnections } from '../hooks/useSocialConnections'
-import { initiateTelegramAuth, verifyTelegramAuth } from '../services/socialAuth'
+import { verifyTelegramAuth } from '../services/socialAuth'
 import TelegramIcon from './icons/TelegramIcon'
 
 interface SocialConnectionModalProps {
@@ -53,11 +53,19 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
   const config = platformConfig[platform]
 
   useEffect(() => {
+    if (authStatus !== 'idle') return
+
+    // Clean up any existing script first
+    const existingScript = document.querySelector('script[src*="telegram-widget"]')
+    if (existingScript) {
+      existingScript.remove()
+    }
+
     // Inject the Telegram login script
     const script = document.createElement('script')
     script.src = "https://telegram.org/js/telegram-widget.js?22"
     script.async = true
-    script.setAttribute('data-telegram-login', import.meta.env.VITE_TELEGRAM_BOT_USERNAME)
+    script.setAttribute('data-telegram-login', import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'Pumpeddotfun_bot')
     script.setAttribute('data-size', 'large')
     script.setAttribute('data-onauth', 'onTelegramAuth(user)')
     script.setAttribute('data-request-access', 'write')
@@ -76,25 +84,35 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
       }
       delete window.onTelegramAuth
     }
-  }, [])
+  }, [authStatus])
 
   const handleTelegramAuth = async (telegramUser: TelegramUser) => {
     setAuthStatus('loading')
     setError(null)
+    
     try {
-      const { success, error } = await verifyTelegramAuth(telegramUser)
-      if (success) {
-        await addConnection({
-          platform: 'telegram',
-          platform_user_id: telegramUser.id.toString(),
-          platform_username: telegramUser.username,
-        })
-        setAuthStatus('success')
-        setTimeout(onClose, 2000)
-      } else {
-        throw new Error(error || 'Telegram authentication failed.')
+      console.log('Telegram auth data received:', telegramUser)
+      
+      // Verify the authentication data
+      const verification = verifyTelegramAuth(telegramUser)
+      
+      if (!verification.success) {
+        throw new Error(verification.error || 'Telegram authentication verification failed')
       }
+
+      // Create the social connection
+      await addConnection({
+        platform: 'telegram',
+        platform_user_id: telegramUser.id.toString(),
+        platform_username: telegramUser.username || telegramUser.first_name,
+        user_id: user.id,
+        is_active: true
+      })
+      
+      setAuthStatus('success')
+      setTimeout(onClose, 2000)
     } catch (err) {
+      console.error('Telegram auth error:', err)
       setError(err instanceof Error ? err.message : 'An unknown error occurred.')
       setAuthStatus('error')
     }
@@ -113,6 +131,11 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
       await removeConnection(connection.id)
       onClose()
     }
+  }
+
+  const handleRetry = () => {
+    setAuthStatus('idle')
+    setError(null)
   }
 
   return (
@@ -166,19 +189,30 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
 
               {authStatus === 'loading' && (
                 <div className="text-center text-gray-400">
+                  <div className="animate-spin w-6 h-6 border-2 border-blue-400 border-t-transparent rounded-full mx-auto mb-2"></div>
                   <p>Verifying authentication...</p>
                 </div>
               )}
 
               {authStatus === 'success' && (
                 <div className="p-4 rounded-lg bg-green-500/10 text-center">
+                  <CheckCircle className="w-8 h-8 text-green-400 mx-auto mb-2" />
                   <p className="text-green-400">Successfully connected!</p>
                 </div>
               )}
 
               {authStatus === 'error' && (
-                <div className="p-4 rounded-lg bg-red-500/10 text-center">
-                  <p className="text-red-400">{error}</p>
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30 text-center">
+                    <AlertCircle className="w-8 h-8 text-red-400 mx-auto mb-2" />
+                    <p className="text-red-400 text-sm">{error}</p>
+                  </div>
+                  <button
+                    onClick={handleRetry}
+                    className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors duration-200"
+                  >
+                    Try Again
+                  </button>
                 </div>
               )}
 
