@@ -69,7 +69,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     verifyTask
   } = useBountyData(user.id)
 
-  const { getConnectionByPlatform } = useSocialConnections(user.id)
+  const { getConnectionByPlatform, loading: connectionsLoading } = useSocialConnections(user.id)
   const { referralStatus, loading: referralLoading, refreshReferralStatus } = useReferralStatus(user.id)
 
   // Use the referral code from the user object - ensure it's properly displayed
@@ -92,12 +92,12 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
   const handleTaskAction = async (taskId: string, platform?: 'telegram' | 'x' | 'general') => {
     const task = bountyTasks.active.find(t => t.id === taskId)
     
-    // Only check for connection if it's a Telegram task that requires connection
+    // Check if user has the required connection for this task
     if (task?.requires_connection && platform === 'telegram') {
       const connection = getConnectionByPlatform(platform)
       
-      if (!connection) {
-        // Show connection required modal
+      // If no connection exists, show the connection required modal
+      if (!connection || !connection.is_active) {
         setShowConnectionModal(platform)
         return
       }
