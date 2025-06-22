@@ -310,12 +310,12 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                     <p className="text-xl sm:text-2xl font-bold text-white">#{userStats?.globalRank || 'N/A'}</p>
                     <p className="text-xs text-gray-400">{userStats?.totalPoints || 0} Points</p>
                   </div>
-                  {/* Referral and Points Stats - Flipped order */}
+                  {/* Referral and Points Stats - Updated text */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                     <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                       <div className="flex items-center space-x-2 mb-1">
                         <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
-                        <span className="text-xs text-blue-400 font-medium">Total Referrals</span>
+                        <span className="text-xs text-blue-400 font-medium">Friends Invited</span>
                       </div>
                       <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.totalReferrals || 0}</p>
                       <p className="text-xs text-gray-400">Friends invited</p>
@@ -326,7 +326,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                         <span className="text-xs text-green-400 font-medium">Valid Referrals</span>
                       </div>
                       <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.bonusReferrals || 0}</p>
-                      <p className="text-xs text-gray-400">(Socials Linked)</p>
+                      <p className="text-xs text-gray-400">Socials Linked</p>
                     </div>
                     <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                       <div className="flex items-center space-x-2 mb-1">
@@ -334,7 +334,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                         <span className="text-xs text-green-400 font-medium">Total Points</span>
                       </div>
                       <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.totalPoints || 0}</p>
-                      <p className="text-xs text-gray-400">From all activities</p>
+                      <p className="text-xs text-gray-400">All Activities</p>
                     </div>
                   </div>
                 </div>

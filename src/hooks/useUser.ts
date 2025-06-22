@@ -64,7 +64,8 @@ export const useUser = () => {
           username,
           connection_timestamp: new Date().toISOString(),
           current_points: 0,
-          current_rank: 0
+          current_rank: 0,
+          is_active: true
         }
 
         // Use upsert to handle potential race conditions
