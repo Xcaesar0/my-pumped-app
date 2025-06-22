@@ -103,11 +103,14 @@ export const useUser = () => {
         }
       }
 
+      // Set user state immediately to prevent UI flickering
       setUser(finalUser)
       setIsNewUser(userIsNew)
       
-      // Process any pending referral
-      await processReferralIfPending(finalUser.id)
+      // Process any pending referral in the background
+      if (userIsNew || !finalUser.current_points) {
+        processReferralIfPending(finalUser.id)
+      }
       
       // Only show referral modal for new users who don't have a pending referral and haven't used a code
       if (userIsNew) {
@@ -115,7 +118,10 @@ export const useUser = () => {
         const pendingReferral = referralCode
         
         if (!pendingReferral && !hasExistingReferral) {
-          setShowReferralModal(true)
+          // Delay showing modal slightly to ensure smooth transition
+          setTimeout(() => {
+            setShowReferralModal(true)
+          }, 500)
         }
       }
 
