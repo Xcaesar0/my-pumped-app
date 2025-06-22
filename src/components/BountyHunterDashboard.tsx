@@ -32,7 +32,7 @@ import {
 import { User } from '../lib/supabase'
 import {
   useBountyData,
-  LeaderboardData,
+  LeaderboardEntry,
   BountyTasksData,
   UserStats,
   BountyTask
@@ -52,7 +52,6 @@ interface BountyHunterDashboardProps {
 }
 
 const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) => {
-  const [activeLeaderboardTab, setActiveLeaderboardTab] = useState<'referrers' | 'points'>('referrers')
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | null>(null)
   const [copiedReferral, setCopiedReferral] = useState(false)
@@ -225,34 +224,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                     <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
                     <h2 className="text-lg sm:text-xl font-bold text-white">Global Leaderboard</h2>
                   </div>
-                  
-                  {/* Tabs */}
-                  <div className="flex space-x-1 p-1 rounded-lg" style={{ backgroundColor: '#262626' }}>
-                    <button
-                      onClick={() => setActiveLeaderboardTab('referrers')}
-                      className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
-                        activeLeaderboardTab === 'referrers'
-                          ? 'text-white' 
-                          : 'text-gray-400 hover:text-gray-300'
-                      }`}
-                      style={{ backgroundColor: activeLeaderboardTab === 'referrers' ? '#52D593' : 'transparent' }}
-                    >
-                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>Referrers</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveLeaderboardTab('points')}
-                      className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
-                        activeLeaderboardTab === 'points'
-                          ? 'text-white'
-                          : 'text-gray-400 hover:text-gray-300'
-                      }`}
-                      style={{ backgroundColor: activeLeaderboardTab === 'points' ? '#52D593' : 'transparent' }}
-                    >
-                      <Star className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>Points</span>
-                    </button>
-                  </div>
+                  <p className="text-xs sm:text-sm text-gray-400">Top users ranked by points</p>
                 </div>
 
                 {/* Leaderboard Content */}
@@ -264,7 +236,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {leaderboard[activeLeaderboardTab]?.slice(0, 10).map((entry, index) => (
+                      {leaderboard?.slice(0, 10).map((entry, index) => (
                         <div
                           key={`${entry.username}-${entry.rank}`}
                           className={`p-3 rounded-lg border transition-all duration-200 ${
@@ -288,16 +260,22 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                             </div>
                             {/* User info */}
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{entry.username}</p>
+                              <div className="flex items-center space-x-1">
+                                <p className="text-sm font-medium text-white truncate">{entry.username}</p>
+                                {entry.referrals > 0 && (
+                                  <span className="text-xs text-gray-400 flex items-center space-x-1">
+                                    <span>(</span>
+                                    <Users className="w-3 h-3" />
+                                    <span>{entry.referrals}</span>
+                                    <span>)</span>
+                                  </span>
+                                )}
+                              </div>
                             </div>
-                            {/* Points/Referrals */}
+                            {/* Points */}
                             <div className="text-right">
-                              <p className="text-sm font-bold text-white">
-                                {activeLeaderboardTab === 'points' ? (entry as any).points : (entry as any).referrals}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {activeLeaderboardTab === 'points' ? 'Points' : 'Referrals'}
-                              </p>
+                              <p className="text-sm font-bold text-white">{entry.points.toLocaleString()}</p>
+                              <p className="text-xs text-gray-400">Points</p>
                             </div>
                           </div>
                         </div>

@@ -10,17 +10,11 @@ export interface UserStats {
   referredBy?: string
 }
 
-export interface LeaderboardData {
-  referrers: Array<{
-    username: string
-    referrals: number
-    rank: number
-  }>
-  points: Array<{
-    username: string
-    points: number
-    rank: number
-  }>
+export interface LeaderboardEntry {
+  username: string
+  points: number
+  referrals: number
+  rank: number
 }
 
 export interface BountyTask {
@@ -42,7 +36,7 @@ export interface BountyTasksData {
 
 export const useBountyData = (userId: string) => {
   const [userStats, setUserStats] = useState<UserStats | null>(null)
-  const [leaderboard, setLeaderboard] = useState<LeaderboardData>({ referrers: [], points: [] })
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [bountyTasks, setBountyTasks] = useState<BountyTasksData>({ active: [], completed: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -125,20 +119,39 @@ export const useBountyData = (userId: string) => {
 
   const loadLeaderboard = async () => {
     try {
-      // Get top points holders
-      const pointsData = await getLeaderboard(50)
+      // Get top points holders with referral counts
+      const { data: leaderboardData, error } = await supabase
+        .from('users')
+        .select(`
+          username,
+          current_points,
+          id
+        `)
+        .order('current_points', { ascending: false })
+        .order('id', { ascending: true }) // Consistent tiebreaker
+        .limit(50)
 
-      // Get top referrers
-      const referrersData = await getReferralLeaderboard(50)
+      if (error) throw error
 
-      setLeaderboard({
-        referrers: referrersData.map(entry => ({
-          username: entry.username,
-          referrals: entry.referrals || 0,
-          rank: entry.rank
-        })),
-        points: pointsData
-      })
+      // Get referral counts for each user
+      const leaderboardWithReferrals = await Promise.all(
+        (leaderboardData || []).map(async (user, index) => {
+          const { count: referralCount } = await supabase
+            .from('referrals')
+            .select('*', { count: 'exact', head: true })
+            .eq('referrer_id', user.id)
+            .eq('status', 'active')
+
+          return {
+            username: user.username,
+            points: user.current_points || 0,
+            referrals: referralCount || 0,
+            rank: index + 1
+          }
+        })
+      )
+
+      setLeaderboard(leaderboardWithReferrals)
     } catch (error) {
       console.error('Error loading leaderboard:', error)
       throw error
