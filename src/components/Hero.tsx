@@ -5,8 +5,7 @@ import { useUser } from '../hooks/useUser'
 import ConnectedHero from './ConnectedHero'
 import ReferralPage from './ReferralPage'
 import ReferralCodeModal from './ReferralCodeModal'
-import Particles from './Particles'
-import FuzzyText from './FuzzyText'
+import LetterGlitch from './LetterGlitch'
 import PixelTransition from './PixelTransition'
 import PillBlue from '../assets/Pill-blue.png'
 import PillRed from '../assets/Pill-red.png'
@@ -72,20 +71,14 @@ const Hero = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-3 sm:px-6" style={{ backgroundColor: '#1A1A1A' }}>
-      {/* Particle effect background - only on main hero screen */}
+      {/* LetterGlitch background effect */}
       <div className="absolute inset-0 z-0">
-        <Particles
-          particleCount={150}
-          particleSpread={8}
-          speed={0.05}
-          particleColors={['#ffffff', '#e5e5e5', '#cccccc']}
-          moveParticlesOnHover={true}
-          particleHoverFactor={0.5}
-          alphaParticles={true}
-          particleBaseSize={80}
-          sizeRandomness={0.8}
-          cameraDistance={25}
-          disableRotation={false}
+        <LetterGlitch
+          glitchSpeed={50}
+          centerVignette={true}
+          outerVignette={false}
+          smooth={true}
+          glitchColors={['#2b4539', '#61dca3', '#61b3dc']}
         />
       </div>
 
