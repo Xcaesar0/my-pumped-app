@@ -161,13 +161,13 @@ const Hero = () => {
                 </button>
               }
               secondContent={
-                <div className="w-full h-full relative">
+                <div className="w-full h-full relative rounded-lg sm:rounded-xl md:rounded-2xl overflow-hidden">
                   <img
                     src="https://images.saymedia-content.com/.image/ar_16:9%2Cc_fill%2Ccs_srgb%2Cq_auto:eco%2Cw_1200/MTc0NTA2NDM0MTA3NTQ5Njg2/why-neo-is-the-one-in-the-matrix-trilogy.png"
                     alt="Neo from The Matrix"
-                    className="w-full h-full object-cover rounded-lg sm:rounded-xl md:rounded-2xl"
+                    className="w-full h-full object-cover"
                   />
-                  <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center rounded-lg sm:rounded-xl md:rounded-2xl">
+                  <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center">
                     <span className="text-white text-base sm:text-lg md:text-xl lg:text-2xl font-bold">ENTER THE MATRIX</span>
                   </div>
                 </div>

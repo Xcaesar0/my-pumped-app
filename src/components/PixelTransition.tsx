@@ -138,9 +138,12 @@ const PixelTransition: React.FC<PixelTransitionProps> = ({
       onMouseLeave={!isTouchDevice ? handleMouseLeave : undefined}
       onClick={handleClick}
     >
-      <div style={{ paddingTop: aspectRatio }} />
+      {/* Only add padding-top if aspectRatio is not "0%" */}
+      {aspectRatio !== "0%" && <div style={{ paddingTop: aspectRatio }} />}
 
-      <div className="absolute inset-0 w-full h-full">{firstContent}</div>
+      <div className={`${aspectRatio === "0%" ? "relative" : "absolute inset-0"} w-full h-full`}>
+        {firstContent}
+      </div>
 
       <div
         ref={activeRef}
