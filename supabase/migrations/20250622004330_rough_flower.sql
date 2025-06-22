@@ -1,33 +1,41 @@
 /*
-  # Fix admin tasks platform and ensure proper task data
+  # Fix admin tasks migration with proper unique constraint
 
-  1. Changes
-    - Update any existing 'twitter' platform tasks to 'x'
-    - Remove duplicate tasks safely using row_number() instead of MIN()
-    - Ensure X platform tasks exist with correct data
-    - Ensure Telegram task exists
+  1. Schema Changes
+    - Add unique constraint on title column for admin_tasks table
+    - Update existing tasks to use 'x' platform instead of 'twitter'
+    - Insert or update admin tasks with proper conflict resolution
 
-  2. Security
-    - Updates existing admin_tasks table
-    - Uses UPSERT pattern for safe data insertion
+  2. Data Changes
+    - Ensure X platform tasks exist with correct configuration
+    - Ensure Telegram task exists with correct configuration
 */
+
+-- First, remove any duplicate tasks by title (keep the oldest one)
+DELETE FROM admin_tasks a1
+WHERE EXISTS (
+  SELECT 1 FROM admin_tasks a2 
+  WHERE a2.title = a1.title 
+  AND a2.created_at < a1.created_at
+);
+
+-- Add unique constraint on title column if it doesn't exist
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint 
+    WHERE conname = 'admin_tasks_title_key'
+  ) THEN
+    ALTER TABLE admin_tasks ADD CONSTRAINT admin_tasks_title_key UNIQUE (title);
+  END IF;
+END $$;
 
 -- Update any existing tasks that might have 'twitter' platform to 'x'
 UPDATE admin_tasks 
 SET platform = 'x' 
 WHERE platform = 'twitter';
 
--- Delete duplicate tasks using row_number() instead of MIN() for UUID compatibility
-DELETE FROM admin_tasks 
-WHERE id IN (
-  SELECT id FROM (
-    SELECT id, 
-           ROW_NUMBER() OVER (PARTITION BY title, platform ORDER BY created_at) as rn
-    FROM admin_tasks
-  ) ranked
-  WHERE rn > 1
-);
-
+-- Now we can safely use ON CONFLICT with the unique constraint
 -- Ensure the X platform tasks exist with correct data
 INSERT INTO admin_tasks (title, description, platform, points, action_url, verification_type, requires_connection, is_active)
 VALUES 
