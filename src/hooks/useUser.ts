@@ -64,8 +64,7 @@ export const useUser = () => {
           username,
           connection_timestamp: new Date().toISOString(),
           current_points: 0,
-          current_rank: 0,
-          is_active: true
+          current_rank: 0
         }
 
         // Use upsert to handle potential race conditions
@@ -104,38 +103,26 @@ export const useUser = () => {
         }
       }
 
-      // Set user state immediately to prevent UI flickering
       setUser(finalUser)
       setIsNewUser(userIsNew)
-      setLoading(false) // Set loading to false immediately after setting user
       
-      // Process any pending referral in the background (non-blocking)
-      if (userIsNew || !finalUser.current_points) {
-        // Use setTimeout to make this truly async and non-blocking
-        setTimeout(() => {
-          processReferralIfPending(finalUser.id)
-        }, 100)
-      }
+      // Process any pending referral
+      await processReferralIfPending(finalUser.id)
       
       // Only show referral modal for new users who don't have a pending referral and haven't used a code
       if (userIsNew) {
-        // Check for existing referral in background
-        setTimeout(async () => {
-          const hasExistingReferral = await checkExistingReferral(finalUser.id)
-          const pendingReferral = referralCode
-          
-          if (!pendingReferral && !hasExistingReferral) {
-            // Delay showing modal slightly to ensure smooth transition
-            setTimeout(() => {
-              setShowReferralModal(true)
-            }, 1000) // Increased delay for smoother UX
-          }
-        }, 200)
+        const hasExistingReferral = await checkExistingReferral(finalUser.id)
+        const pendingReferral = referralCode
+        
+        if (!pendingReferral && !hasExistingReferral) {
+          setShowReferralModal(true)
+        }
       }
 
     } catch (err) {
       console.error('Error handling wallet connection:', err)
       setError(err instanceof Error ? err.message : 'Failed to connect user')
+    } finally {
       setLoading(false)
     }
   }
@@ -174,20 +161,15 @@ export const useUser = () => {
           userAgent
         )
         
-        // Process the referral using the new function
-        const { data, error } = await supabase.rpc('process_referral_code_entry', {
-          referral_code_param: pendingReferral,
-          referee_id_param: userId
-        })
+        // Process the referral using the code directly
+        const result = await processReferralFromCode(pendingReferral, userId)
         
-        if (error) {
-          console.warn('Referral processing failed:', error)
-        } else if (data?.success) {
-          console.log('Referral processed successfully:', data)
+        if (result.success) {
+          console.log('Referral processed successfully:', result)
           // Refresh user data to show updated points
           await refreshUser()
         } else {
-          console.warn('Referral processing failed:', data?.error)
+          console.warn('Referral processing failed:', result.error)
         }
         
         // Clear the pending referral regardless of success/failure

@@ -6,7 +6,7 @@ const REFERRAL_CODE_KEY = 'pending_referral_code';
 export const useReferralInfo = () => {
     const [referralCode, setReferralCode] = useState<string | null>(null);
     const [referrerUsername, setReferrerUsername] = useState<string | null>(null);
-    const [isLoading, setIsLoading] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
         const path = window.location.pathname;
@@ -14,9 +14,7 @@ export const useReferralInfo = () => {
             const code = path.split('/ref/')[1];
             if (code) {
                 sessionStorage.setItem(REFERRAL_CODE_KEY, code);
-                // Clean up URL without causing navigation
-                const newUrl = window.location.pathname.split('/ref/')[0] || '/';
-                window.history.replaceState({}, document.title, newUrl);
+                window.history.replaceState({}, document.title, window.location.pathname.split('/ref/')[0] || '/');
             }
         }
         
@@ -33,25 +31,19 @@ export const useReferralInfo = () => {
 
         const fetchReferrer = async () => {
             setIsLoading(true);
-            try {
-                const { data, error } = await supabase
-                    .from('users')
-                    .select('username')
-                    .eq('referral_code', referralCode)
-                    .single();
+            const { data, error } = await supabase
+                .from('users')
+                .select('username')
+                .eq('referral_code', referralCode)
+                .single();
 
-                if (error) {
-                    console.error("Error fetching referrer username:", error.message);
-                    setReferrerUsername(null);
-                } else if (data) {
-                    setReferrerUsername(data.username);
-                }
-            } catch (err) {
-                console.error("Error in fetchReferrer:", err);
+            if (error) {
+                console.error("Error fetching referrer username:", error.message);
                 setReferrerUsername(null);
-            } finally {
-                setIsLoading(false);
+            } else if (data) {
+                setReferrerUsername(data.username);
             }
+            setIsLoading(false);
         };
 
         fetchReferrer();
@@ -63,10 +55,5 @@ export const useReferralInfo = () => {
         setReferrerUsername(null);
     };
 
-    return { 
-        referralCode, 
-        referrerUsername, 
-        isLoadingReferrer: isLoading, 
-        clearReferralInfo 
-    };
-};
+    return { referralCode, referrerUsername, isLoadingReferrer: isLoading, clearReferralInfo };
+}; 
