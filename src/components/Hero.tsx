@@ -7,6 +7,7 @@ import ReferralPage from './ReferralPage'
 import ReferralCodeModal from './ReferralCodeModal'
 import Particles from './Particles'
 import FuzzyText from './FuzzyText'
+import PixelTransition from './PixelTransition'
 import PillBlue from '../assets/Pill-blue.png'
 import PillRed from '../assets/Pill-red.png'
 import { useReferralInfo } from '../hooks/useReferralInfo'
@@ -122,6 +123,7 @@ const Hero = () => {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mt-8 sm:mt-12 lg:mt-16 px-2 sm:px-4">
+          {/* YES Button with Pixel Transition */}
           <div className="relative w-full sm:w-auto max-w-xs sm:max-w-none">
             <div className={`absolute -top-3 sm:-top-4 md:-top-6 -right-1 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 z-20 transition-all duration-300 ${
               hoveredButton === 'yes' ? 'twinkle-red' : ''
@@ -142,21 +144,44 @@ const Hero = () => {
                 </div>
               )}
             </div>
-            <button
+            
+            <PixelTransition
+              firstContent={
+                <button
+                  onMouseEnter={() => setHoveredButton('yes')}
+                  onMouseLeave={() => setHoveredButton(null)}
+                  className="relative group w-full sm:w-auto px-6 sm:px-8 md:px-10 lg:px-12 py-3 sm:py-4 md:py-5 lg:py-6 text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white rounded-lg sm:rounded-xl md:rounded-2xl overflow-hidden transition-all duration-300 transform hover:scale-105 sm:hover:scale-110 active:scale-95 min-w-[120px] sm:min-w-[140px] md:min-w-[160px]"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 group-hover:from-red-500 group-hover:to-red-600 transition-all duration-300" />
+                  <div className={`absolute inset-0 bg-gradient-to-r from-red-400 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
+                    hoveredButton === 'yes' ? 'animate-pulse' : ''
+                  }`} />
+                  <div className="absolute inset-0 rounded-lg sm:rounded-xl md:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_15px_rgba(239,68,68,0.4)] sm:shadow-[0_0_20px_rgba(239,68,68,0.4)] md:shadow-[0_0_30px_rgba(239,68,68,0.5)]" />
+                  <span className="relative z-10">YES</span>
+                </button>
+              }
+              secondContent={
+                <div className="w-full h-full relative">
+                  <img
+                    src="https://images.saymedia-content.com/.image/ar_16:9%2Cc_fill%2Ccs_srgb%2Cq_auto:eco%2Cw_1200/MTc0NTA2NDM0MTA3NTQ5Njg2/why-neo-is-the-one-in-the-matrix-trilogy.png"
+                    alt="Neo from The Matrix"
+                    className="w-full h-full object-cover rounded-lg sm:rounded-xl md:rounded-2xl"
+                  />
+                  <div className="absolute inset-0 bg-black bg-opacity-30 flex items-center justify-center rounded-lg sm:rounded-xl md:rounded-2xl">
+                    <span className="text-white text-base sm:text-lg md:text-xl lg:text-2xl font-bold">ENTER THE MATRIX</span>
+                  </div>
+                </div>
+              }
+              gridSize={12}
+              pixelColor="#ff0000"
+              animationStepDuration={0.4}
               onClick={handleYesClick}
-              onMouseEnter={() => setHoveredButton('yes')}
-              onMouseLeave={() => setHoveredButton(null)}
-              className="relative group w-full sm:w-auto px-6 sm:px-8 md:px-10 lg:px-12 py-3 sm:py-4 md:py-5 lg:py-6 text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white rounded-lg sm:rounded-xl md:rounded-2xl overflow-hidden transition-all duration-300 transform hover:scale-105 sm:hover:scale-110 active:scale-95 min-w-[120px] sm:min-w-[140px] md:min-w-[160px]"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 group-hover:from-red-500 group-hover:to-red-600 transition-all duration-300" />
-              <div className={`absolute inset-0 bg-gradient-to-r from-red-400 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
-                hoveredButton === 'yes' ? 'animate-pulse' : ''
-              }`} />
-              <div className="absolute inset-0 rounded-lg sm:rounded-xl md:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_15px_rgba(239,68,68,0.4)] sm:shadow-[0_0_20px_rgba(239,68,68,0.4)] md:shadow-[0_0_30px_rgba(239,68,68,0.5)]" />
-              <span className="relative z-10">YES</span>
-            </button>
+              aspectRatio="0%"
+              className="w-full sm:w-auto"
+            />
           </div>
 
+          {/* NO Button (unchanged) */}
           <div className="relative w-full sm:w-auto max-w-xs sm:max-w-none">
             <div className={`absolute -top-3 sm:-top-4 md:-top-6 -right-1 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 z-20 transition-all duration-300 ${
               hoveredButton === 'no' ? 'twinkle-blue' : ''
