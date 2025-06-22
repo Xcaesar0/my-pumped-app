@@ -52,7 +52,6 @@ interface BountyHunterDashboardProps {
 }
 
 const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) => {
-  const [activeLeaderboardTab, setActiveLeaderboardTab] = useState<'referrers' | 'points'>('referrers')
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | null>(null)
   const [copiedReferral, setCopiedReferral] = useState(false)
@@ -212,43 +211,16 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
 
           {/* Main Dashboard Grid */}
           <div className="grid grid-cols-1 lg:grid-cols-7 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
-            {/* Left Column: Global Leaderboard */}
+            {/* Left Column: Points Leaderboard */}
             <div className="lg:col-span-2 order-2 lg:order-1">
               <div className="rounded-2xl border border-gray-700/50 overflow-hidden h-full" style={{ backgroundColor: '#171717' }}>
                 {/* Header */}
                 <div className="p-4 sm:p-6 border-b border-gray-700/50">
-                  <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
                     <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
-                    <h2 className="text-lg sm:text-xl font-bold text-white">Global Leaderboard</h2>
+                    <h2 className="text-lg sm:text-xl font-bold text-white">Leaderboard</h2>
                   </div>
-                  
-                  {/* Tabs */}
-                  <div className="flex space-x-1 p-1 rounded-lg" style={{ backgroundColor: '#262626' }}>
-                    <button
-                      onClick={() => setActiveLeaderboardTab('referrers')}
-                      className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
-                        activeLeaderboardTab === 'referrers'
-                          ? 'text-white' 
-                          : 'text-gray-400 hover:text-gray-300'
-                      }`}
-                      style={{ backgroundColor: activeLeaderboardTab === 'referrers' ? '#52D593' : 'transparent' }}
-                    >
-                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>Referrers</span>
-                    </button>
-                    <button
-                      onClick={() => setActiveLeaderboardTab('points')}
-                      className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
-                        activeLeaderboardTab === 'points'
-                          ? 'text-white'
-                          : 'text-gray-400 hover:text-gray-300'
-                      }`}
-                      style={{ backgroundColor: activeLeaderboardTab === 'points' ? '#52D593' : 'transparent' }}
-                    >
-                      <Star className="w-3 h-3 sm:w-4 sm:h-4" />
-                      <span>Points</span>
-                    </button>
-                  </div>
+                  <p className="text-xs sm:text-sm text-gray-400 mt-1">Top users by points</p>
                 </div>
 
                 {/* Leaderboard Content */}
@@ -260,44 +232,58 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {leaderboard[activeLeaderboardTab]?.slice(0, 10).map((entry, index) => (
-                        <div
-                          key={`${entry.username}-${entry.rank}`}
-                          className={`p-3 rounded-lg border transition-all duration-200 ${
-                            entry.username === user.username
-                              ? 'border-green-500/50 bg-green-500/5'
-                              : 'border-gray-700/50 bg-gray-800/20 hover:border-gray-600/50'
-                          }`}
-                          style={{ 
-                            borderColor: entry.username === user.username ? '#52D593' : undefined,
-                            backgroundColor: entry.username === user.username ? 'rgba(82, 213, 147, 0.05)' : undefined
-                          }}
-                        >
-                          <div className="flex items-center space-x-3">
-                            {/* Rank */}
-                            <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border ${getRankColor(entry.rank)}`}>
-                              {entry.rank <= 3 ? (
-                                getRankIcon(entry.rank)
-                              ) : (
-                                <span className="text-xs sm:text-sm font-medium">{entry.rank}</span>
-                              )}
-                            </div>
-                            {/* User info */}
-                            <div className="flex-1 min-w-0">
-                              <p className="text-sm font-medium text-white truncate">{entry.username}</p>
-                            </div>
-                            {/* Points/Referrals */}
-                            <div className="text-right">
-                              <p className="text-sm font-bold text-white">
-                                {activeLeaderboardTab === 'points' ? (entry as any).points : (entry as any).referrals}
-                              </p>
-                              <p className="text-xs text-gray-400">
-                                {activeLeaderboardTab === 'points' ? 'Points' : 'Referrals'}
-                              </p>
+                      {leaderboard.points?.slice(0, 10).map((entry, index) => {
+                        // Find corresponding referrer data for this user
+                        const referrerData = leaderboard.referrers?.find(r => r.username === entry.username)
+                        const referralCount = referrerData?.referrals || 0
+                        
+                        return (
+                          <div
+                            key={`${entry.username}-${entry.rank}`}
+                            className={`p-3 rounded-lg border transition-all duration-200 ${
+                              entry.username === user.username
+                                ? 'border-green-500/50 bg-green-500/5'
+                                : 'border-gray-700/50 bg-gray-800/20 hover:border-gray-600/50'
+                            }`}
+                            style={{ 
+                              borderColor: entry.username === user.username ? '#52D593' : undefined,
+                              backgroundColor: entry.username === user.username ? 'rgba(82, 213, 147, 0.05)' : undefined
+                            }}
+                          >
+                            <div className="flex items-center space-x-3">
+                              {/* Rank */}
+                              <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border ${getRankColor(entry.rank)}`}>
+                                {entry.rank <= 3 ? (
+                                  getRankIcon(entry.rank)
+                                ) : (
+                                  <span className="text-xs sm:text-sm font-medium">{entry.rank}</span>
+                                )}
+                              </div>
+                              {/* User info */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center space-x-1">
+                                  <p className="text-sm font-medium text-white truncate">{entry.username}</p>
+                                  {referralCount > 0 && (
+                                    <span className="text-xs text-gray-400 flex items-center space-x-1 flex-shrink-0">
+                                      <span>(</span>
+                                      <UserIcon className="w-3 h-3" />
+                                      <span>{referralCount}</span>
+                                      <span>)</span>
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              {/* Points */}
+                              <div className="text-right">
+                                <p className="text-sm font-bold text-white">
+                                  {entry.points.toLocaleString()}
+                                </p>
+                                <p className="text-xs text-gray-400">Points</p>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   )}
                 </div>
