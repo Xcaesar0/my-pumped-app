@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
-import { X, Settings, LogOut, Unlink } from 'lucide-react'
+import { X, Settings, LogOut, Unlink, AlertCircle } from 'lucide-react'
 import { User } from '../lib/supabase'
 import { useSocialConnections } from '../hooks/useSocialConnections'
 import { useDisconnect } from 'wagmi'
 import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
 import XIcon from './icons/XIcon'
-import { initiateXAuth } from '../services/socialAuth'
+import { initiateXAuth, createMockXConnection } from '../services/socialAuth'
 
 interface ProfileSettingsModalProps {
   user: User
@@ -17,12 +17,15 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const { 
     getConnectionByPlatform, 
     removeConnection,
+    addConnection,
     loading: connectionsLoading 
   } = useSocialConnections(user.id)
   
   const { disconnect } = useDisconnect()
   
   const [socialModal, setSocialModal] = useState<'telegram' | null>(null)
+  const [xAuthLoading, setXAuthLoading] = useState(false)
+  const [xAuthMessage, setXAuthMessage] = useState<string | null>(null)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -40,10 +43,36 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleConnectX = async () => {
+    setXAuthLoading(true)
+    setXAuthMessage(null)
+    
     try {
-      await initiateXAuth()
+      // For now, show development message and create a mock connection
+      setXAuthMessage('X (Twitter) integration is under development. Creating demo connection...')
+      
+      // Wait a moment to show the message
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      
+      // Create a mock X connection for demo purposes
+      await createMockXConnection(user.id, `${user.username}_x`)
+      
+      setXAuthMessage('Demo X connection created! Full integration coming soon.')
+      
+      // Clear message after a few seconds
+      setTimeout(() => {
+        setXAuthMessage(null)
+      }, 3000)
+      
     } catch (error) {
       console.error('Failed to connect X account:', error)
+      setXAuthMessage(error instanceof Error ? error.message : 'Failed to connect X account')
+      
+      // Clear error message after a few seconds
+      setTimeout(() => {
+        setXAuthMessage(null)
+      }, 5000)
+    } finally {
+      setXAuthLoading(false)
     }
   }
 
@@ -113,6 +142,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   </button>
                 )}
               </div>
+              
               <div
                 className="w-full flex items-center justify-between p-4 rounded-lg"
                 style={{ backgroundColor: '#262626' }}
@@ -134,12 +164,23 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                 ) : (
                   <button
                     onClick={handleConnectX}
-                    className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
+                    disabled={xAuthLoading}
+                    className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600 disabled:bg-gray-500 disabled:cursor-not-allowed"
                   >
-                    Connect
+                    {xAuthLoading ? 'Connecting...' : 'Connect'}
                   </button>
                 )}
               </div>
+              
+              {/* X Auth Status Message */}
+              {xAuthMessage && (
+                <div className="p-3 rounded-lg border border-orange-500/30 bg-orange-500/10">
+                  <div className="flex items-start space-x-2">
+                    <AlertCircle className="w-4 h-4 text-orange-400 mt-0.5 flex-shrink-0" />
+                    <p className="text-xs text-orange-300">{xAuthMessage}</p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

@@ -115,15 +115,46 @@ export const updateUsername = async (userId: string, newUsername: string) => {
   return data
 }
 
-// X (Twitter) Authentication via Auth0
+// X (Twitter) Authentication - Simplified approach
 export const initiateXAuth = async () => {
   try {
-    console.log('Initiating X (Twitter) authentication via Auth0...')
-    const result = await signInWithXAuth()
-    console.log('X auth initiated successfully:', result)
-    return result
+    console.log('X (Twitter) authentication is currently under development')
+    
+    // For now, show a message that X integration is coming soon
+    // In production, you would implement proper X OAuth flow
+    throw new Error('X (Twitter) integration is currently under development. Please check back soon!')
   } catch (error) {
     console.error('Error initiating X auth:', error)
     throw error
   }
+}
+
+// Mock X connection for development/demo purposes
+export const createMockXConnection = async (userId: string, username: string): Promise<SocialConnection> => {
+  const mockConnection: Omit<SocialConnection, 'id' | 'connected_at'> = {
+    user_id: userId,
+    platform: 'x',
+    platform_user_id: `mock_${Date.now()}`,
+    platform_username: username,
+    is_active: true,
+    auth_provider: 'mock'
+  }
+
+  const { data, error } = await supabase
+    .from('social_connections')
+    .upsert({
+      ...mockConnection,
+      connected_at: new Date().toISOString()
+    }, {
+      onConflict: 'user_id,platform'
+    })
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Error creating mock X connection:', error)
+    throw new Error(`Failed to create X connection: ${error.message}`)
+  }
+
+  return data
 }

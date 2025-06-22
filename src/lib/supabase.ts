@@ -89,24 +89,9 @@ export interface Referral {
   expires_at?: string
 }
 
-// X (Twitter) Authentication via Auth0
+// Removed Auth0 X authentication - will be implemented differently
 export const signInWithXAuth = async () => {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'auth0',
-    options: {
-      redirectTo: `${window.location.origin}/`,
-      queryParams: {
-        connection: 'twitter'
-      }
-    }
-  })
-
-  if (error) {
-    console.error('Error signing in with X (Auth0):', error)
-    throw error
-  }
-
-  return data
+  throw new Error('X authentication is currently under development')
 }
 
 // Social media integration functions
