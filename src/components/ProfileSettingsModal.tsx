@@ -6,7 +6,7 @@ import { useDisconnect } from 'wagmi'
 import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
 import XIcon from './icons/XIcon'
-import { initiateTwitterAuth } from '../services/socialAuth'
+import { initiateXAuth } from '../services/socialAuth'
 
 interface ProfileSettingsModalProps {
   user: User
@@ -23,7 +23,6 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const { disconnect } = useDisconnect()
   
   const [socialModal, setSocialModal] = useState<'telegram' | null>(null)
-  const [twitterLoading, setTwitterLoading] = useState(false)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -40,13 +39,11 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
     }
   }
 
-  const handleConnectTwitter = async () => {
+  const handleConnectX = async () => {
     try {
-      setTwitterLoading(true)
-      await initiateTwitterAuth()
+      await initiateXAuth()
     } catch (error) {
-      console.error('Failed to connect Twitter account:', error)
-      setTwitterLoading(false)
+      console.error('Failed to connect X account:', error)
     }
   }
 
@@ -124,10 +121,8 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <XIcon className="w-5 h-5 text-white" />
                   <span className="text-sm font-medium text-white">X (Twitter)</span>
                 </div>
-                {connectionsLoading || twitterLoading ? (
-                  <span className="text-xs text-gray-400">
-                    {twitterLoading ? 'Connecting...' : 'Loading...'}
-                  </span>
+                {connectionsLoading ? (
+                  <span className="text-xs text-gray-400">Loading...</span>
                 ) : xConnection ? (
                   <button
                     onClick={() => handleDisconnectSocial('x')}
@@ -138,11 +133,10 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   </button>
                 ) : (
                   <button
-                    onClick={handleConnectTwitter}
-                    disabled={twitterLoading}
-                    className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    onClick={handleConnectX}
+                    className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
                   >
-                    {twitterLoading ? 'Connecting...' : 'Connect'}
+                    Connect
                   </button>
                 )}
               </div>

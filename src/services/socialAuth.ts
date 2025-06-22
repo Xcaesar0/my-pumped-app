@@ -1,4 +1,5 @@
-import { SocialConnection } from '../lib/supabase'
+import { SocialConnection, signInWithXAuth } from '../lib/supabase'
+import { encryptToken } from '../utils/encryption'
 import { supabase } from '../lib/supabase'
 
 // Telegram Bot Configuration
@@ -114,47 +115,15 @@ export const updateUsername = async (userId: string, newUsername: string) => {
   return data
 }
 
-// Twitter (X) Authentication via Supabase
-export const initiateTwitterAuth = async () => {
+// X (Twitter) Authentication via Auth0
+export const initiateXAuth = async () => {
   try {
-    console.log('Initiating Twitter authentication via Supabase...')
-    
-    const { data, error } = await supabase.auth.signInWithOAuth({
-      provider: 'twitter',
-      options: {
-        redirectTo: `${window.location.origin}/`,
-        queryParams: {
-          access_type: 'offline',
-          prompt: 'consent',
-        }
-      }
-    })
-
-    if (error) {
-      console.error('Error initiating Twitter auth:', error)
-      throw error
-    }
-
-    console.log('Twitter auth initiated successfully:', data)
-    return data
+    console.log('Initiating X (Twitter) authentication via Auth0...')
+    const result = await signInWithXAuth()
+    console.log('X auth initiated successfully:', result)
+    return result
   } catch (error) {
-    console.error('Error initiating Twitter auth:', error)
+    console.error('Error initiating X auth:', error)
     throw error
-  }
-}
-
-// Create social connection from Twitter auth
-export const createSocialConnectionFromTwitter = (
-  userId: string,
-  twitterUser: any
-): Omit<SocialConnection, 'id' | 'connected_at'> => {
-  return {
-    user_id: userId,
-    platform: 'x',
-    platform_user_id: twitterUser.id || twitterUser.sub,
-    platform_username: twitterUser.user_name || twitterUser.preferred_username || twitterUser.name || `user_${twitterUser.id}`,
-    is_active: true,
-    auth_provider: 'supabase',
-    provider_metadata: twitterUser
   }
 }

@@ -10,7 +10,6 @@ import Hero from './components/Hero';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ReferralPageWrapper from './components/ReferralPageWrapper';
 import { supabase } from './lib/supabase'
-import { createSocialConnectionFromTwitter } from './services/socialAuth'
 
 // Get projectId from environment variables
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
@@ -47,45 +46,47 @@ function AppContent() {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         console.log('Auth state change:', event, session)
         
-        // Handle Twitter authentication
-        if (session.user.app_metadata.provider === 'twitter' && user) {
-          console.log('Processing Twitter connection for user:', user.id)
+        // Handle Auth0 (X/Twitter) authentication
+        if (session.user.app_metadata.provider === 'auth0' && user) {
+          console.log('Processing Auth0 X connection for user:', user.id)
           
           try {
-            // Extract user info from Twitter session
-            const twitterUser = session.user.user_metadata
-            const platformUserId = twitterUser.provider_id || twitterUser.sub || session.user.id
-            const platformUsername = twitterUser.user_name || 
-                                   twitterUser.preferred_username || 
-                                   twitterUser.name || 
-                                   `user_${platformUserId}`
+            // Extract user info from Auth0 session
+            const platformUserId = session.user.user_metadata.sub || session.user.id
+            const platformUsername = session.user.user_metadata.nickname || 
+                                   session.user.user_metadata.name || 
+                                   session.user.user_metadata.preferred_username ||
+                                   `user_${platformUserId.split('|').pop()}`
             
-            // Create X social connection using the helper function
-            const connectionData = createSocialConnectionFromTwitter(user.id, {
-              id: platformUserId,
-              user_name: platformUsername,
-              name: twitterUser.name,
-              ...twitterUser
+            // Create X social connection
+            await addConnection({
+              user_id: user.id,
+              platform: 'x',
+              platform_user_id: platformUserId,
+              platform_username: platformUsername,
+              is_active: true,
+              auth_provider: 'auth0',
+              kinde_connection_id: session.user.id,
+              provider_metadata: session.user.user_metadata
             })
-
-            await addConnection(connectionData)
             
-            // Update user record with Twitter connection timestamp
+            // Update user record with Auth0 info
             const { error: updateError } = await supabase
               .from('users')
               .update({
+                kinde_user_id: session.user.id,
                 x_connected_at: new Date().toISOString()
               })
               .eq('id', user.id)
             
             if (updateError) {
-              console.error('Error updating user with Twitter info:', updateError)
+              console.error('Error updating user with Auth0 info:', updateError)
             } else {
-              console.log('Successfully updated user with Twitter connection')
+              console.log('Successfully updated user with X connection')
             }
             
           } catch (error) {
-            console.error('Error processing Twitter connection:', error)
+            console.error('Error processing Auth0 X connection:', error)
           }
         }
         
