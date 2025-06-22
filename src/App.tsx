@@ -10,6 +10,7 @@ import Hero from './components/Hero';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ReferralPageWrapper from './components/ReferralPageWrapper';
 import { supabase } from './lib/supabase'
+import { processXConnectionPoints } from './services/socialAuth'
 
 // Get projectId from environment variables
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
@@ -85,6 +86,13 @@ function AppContent() {
               console.error('Error updating user with Twitter info:', updateError)
             } else {
               console.log('Successfully updated user with X connection')
+              
+              // Process X connection points using the new system
+              try {
+                await processXConnectionPoints(user.id)
+              } catch (pointsError) {
+                console.warn('Failed to process X connection points:', pointsError)
+              }
             }
             
           } catch (error) {

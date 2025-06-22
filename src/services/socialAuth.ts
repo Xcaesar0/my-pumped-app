@@ -85,17 +85,36 @@ export const verifyTelegramAuth = (authData: TelegramAuthResult): { success: boo
   }
 }
 
-// Create social connection from auth results
-export const createSocialConnectionFromTelegram = (
+// Create social connection from auth results and process points
+export const createSocialConnectionFromTelegram = async (
   userId: string, 
   authResult: TelegramAuthResult
-): Omit<SocialConnection, 'id' | 'connected_at'> => {
-  return {
+): Promise<{ connection: Omit<SocialConnection, 'id' | 'connected_at'>; pointsResult?: any }> => {
+  const connection = {
     user_id: userId,
-    platform: 'telegram',
+    platform: 'telegram' as const,
     platform_user_id: authResult.id.toString(),
     platform_username: authResult.username || authResult.first_name,
     is_active: true
+  }
+
+  // Process social connection points using the new system
+  try {
+    const { data: pointsResult, error: pointsError } = await supabase.rpc('process_social_connection_points', {
+      user_id_param: userId,
+      platform_param: 'telegram'
+    })
+
+    if (pointsError) {
+      console.warn('Failed to process social connection points:', pointsError)
+    } else {
+      console.log('Social connection points processed:', pointsResult)
+    }
+
+    return { connection, pointsResult }
+  } catch (error) {
+    console.warn('Error processing social connection points:', error)
+    return { connection }
   }
 }
 
@@ -125,5 +144,26 @@ export const initiateXAuth = async () => {
   } catch (error) {
     console.error('Error initiating X auth:', error)
     throw error
+  }
+}
+
+// Process X connection points
+export const processXConnectionPoints = async (userId: string) => {
+  try {
+    const { data: pointsResult, error: pointsError } = await supabase.rpc('process_social_connection_points', {
+      user_id_param: userId,
+      platform_param: 'x'
+    })
+
+    if (pointsError) {
+      console.warn('Failed to process X connection points:', pointsError)
+      return null
+    }
+
+    console.log('X connection points processed:', pointsResult)
+    return pointsResult
+  } catch (error) {
+    console.warn('Error processing X connection points:', error)
+    return null
   }
 }

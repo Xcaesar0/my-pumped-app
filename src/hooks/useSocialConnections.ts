@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { SocialConnection, getSocialConnections, createSocialConnection, deleteSocialConnection } from '../lib/supabase'
+import { processXConnectionPoints } from '../services/socialAuth'
 
 export const useSocialConnections = (userId: string | null) => {
   const [connections, setConnections] = useState<SocialConnection[]>([])
@@ -60,6 +61,15 @@ export const useSocialConnections = (userId: string | null) => {
           return [...prev, upsertedConnection]
         }
       })
+
+      // Process points for X connections using the new system
+      if (connection.platform === 'x' && connection.user_id) {
+        try {
+          await processXConnectionPoints(connection.user_id)
+        } catch (pointsError) {
+          console.warn('Failed to process X connection points:', pointsError)
+        }
+      }
 
       return upsertedConnection
     } catch (err) {

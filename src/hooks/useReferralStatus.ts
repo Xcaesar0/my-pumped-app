@@ -6,6 +6,8 @@ export interface ReferralStatus {
   referrerUsername?: string
   status?: 'pending' | 'active' | 'completed'
   referralId?: string
+  pointsEarned?: number
+  socialConnectionsCount?: number
 }
 
 export const useReferralStatus = (userId: string | null) => {
@@ -35,13 +37,18 @@ export const useReferralStatus = (userId: string | null) => {
     try {
       // Check if user has used a referral code (is a referee)
       const { data: referralData, error: referralError } = await supabase
-        .from('referrals')
+        .from('referral_tracking')
         .select(`
           id,
-          status,
-          referrer:users!referrer_id(username)
+          referrer:users!referrer_id(username),
+          code_entry_points_awarded,
+          first_social_points_awarded,
+          second_social_points_awarded,
+          chain_continuation_points_awarded,
+          twitter_connected,
+          telegram_connected
         `)
-        .eq('referred_id', userId)
+        .eq('referee_id', userId)
         .maybeSingle()
 
       if (referralError) {
@@ -49,23 +56,50 @@ export const useReferralStatus = (userId: string | null) => {
         throw referralError
       }
 
+      // Count social connections
+      const { count: socialCount } = await supabase
+        .from('social_connections')
+        .select('*', { count: 'exact', head: true })
+        .eq('user_id', userId)
+        .eq('is_active', true)
+
+      // Calculate points earned from referral system
+      const { data: pointAwards } = await supabase
+        .from('point_awards')
+        .select('points_awarded')
+        .eq('user_id', userId)
+        .in('award_type', [
+          'referral_code_entry_referee',
+          'twitter_connection_referee',
+          'telegram_connection_referee',
+          'self_referral_referee'
+        ])
+
+      const totalPointsEarned = pointAwards?.reduce((sum, award) => sum + award.points_awarded, 0) || 0
+
       if (referralData) {
         setReferralStatus({
           hasUsedReferral: true,
           referrerUsername: (referralData.referrer as any)?.username || 'Unknown',
-          status: referralData.status,
-          referralId: referralData.id
+          status: 'active',
+          referralId: referralData.id,
+          pointsEarned: totalPointsEarned,
+          socialConnectionsCount: socialCount || 0
         })
       } else {
         setReferralStatus({
-          hasUsedReferral: false
+          hasUsedReferral: false,
+          pointsEarned: totalPointsEarned,
+          socialConnectionsCount: socialCount || 0
         })
       }
     } catch (err) {
       console.error('Error loading referral status:', err)
       setError(err instanceof Error ? err.message : 'Failed to load referral status')
       setReferralStatus({
-        hasUsedReferral: false
+        hasUsedReferral: false,
+        pointsEarned: 0,
+        socialConnectionsCount: 0
       })
     } finally {
       setLoading(false)

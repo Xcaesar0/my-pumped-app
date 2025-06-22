@@ -55,7 +55,9 @@ const ReferralCodeInput: React.FC<ReferralCodeInputProps> = ({ userId, onSuccess
           <span className="text-sm font-medium text-green-400">Success!</span>
         </div>
         <p className="text-sm text-white mb-1">{success}</p>
-        <p className="text-xs text-gray-400">You earned +25 points. Connect your X account to activate more rewards.</p>
+        <p className="text-xs text-gray-400">
+          You earned 25 points! Connect your social accounts to earn more and help your referrer earn points too.
+        </p>
       </div>
     )
   }
@@ -97,7 +99,7 @@ const ReferralCodeInput: React.FC<ReferralCodeInputProps> = ({ userId, onSuccess
       </form>
       
       <p className="text-xs text-gray-400 mt-2 text-center">
-        Have a friend's referral code? Enter it to earn bonus points!
+        Have a friend's referral code? Enter it to earn bonus points and help them earn too!
       </p>
     </div>
   )

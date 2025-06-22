@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase, User, getLeaderboard, getReferralLeaderboard } from '../lib/supabase'
+import { supabase, User, getLeaderboard } from '../lib/supabase'
 
 export interface UserStats {
   totalReferrals: number
@@ -8,6 +8,9 @@ export interface UserStats {
   bonusPoints: number
   globalRank: number
   referredBy?: string
+  pointsFromReferrals: number
+  pointsFromSocial: number
+  pointsFromChain: number
 }
 
 export interface LeaderboardEntry {
@@ -81,18 +84,17 @@ export const useBountyData = (userId: string) => {
 
       if (userError) throw userError
 
-      // Get referral count
+      // Get referral count (people this user has referred)
       const { count: referralCount } = await supabase
-        .from('referrals')
+        .from('referral_tracking')
         .select('*', { count: 'exact', head: true })
         .eq('referrer_id', userId)
-        .eq('status', 'active')
 
-      // Get referrer info
+      // Get referrer info (who referred this user)
       const { data: referralData } = await supabase
-        .from('referrals')
+        .from('referral_tracking')
         .select('referrer:users!referrer_id(username)')
-        .eq('referred_id', userId)
+        .eq('referee_id', userId)
         .maybeSingle()
 
       // Calculate global rank
@@ -103,13 +105,36 @@ export const useBountyData = (userId: string) => {
 
       const globalRank = (higherRankedCount || 0) + 1
 
+      // Get point breakdown from point_awards
+      const { data: pointAwards } = await supabase
+        .from('point_awards')
+        .select('award_type, points_awarded')
+        .eq('user_id', userId)
+
+      let pointsFromReferrals = 0
+      let pointsFromSocial = 0
+      let pointsFromChain = 0
+
+      pointAwards?.forEach(award => {
+        if (award.award_type.includes('referral_code_entry') || award.award_type.includes('social_connection')) {
+          pointsFromReferrals += award.points_awarded
+        } else if (award.award_type.includes('twitter_connection') || award.award_type.includes('telegram_connection')) {
+          pointsFromSocial += award.points_awarded
+        } else if (award.award_type.includes('chain_continuation') || award.award_type.includes('self_referral')) {
+          pointsFromChain += award.points_awarded
+        }
+      })
+
       setUserStats({
         totalReferrals: referralCount || 0,
-        bonusReferrals: 0, // TODO: Implement bonus referrals logic
+        bonusReferrals: 0, // TODO: Implement bonus referrals logic if needed
         totalPoints: user.current_points || 0,
-        bonusPoints: 0, // TODO: Implement bonus points logic
+        bonusPoints: pointsFromReferrals + pointsFromSocial + pointsFromChain,
         globalRank,
-        referredBy: referralData?.referrer?.username
+        referredBy: (referralData?.referrer as any)?.username,
+        pointsFromReferrals,
+        pointsFromSocial,
+        pointsFromChain
       })
     } catch (error) {
       console.error('Error loading user stats:', error)
@@ -137,10 +162,9 @@ export const useBountyData = (userId: string) => {
       const leaderboardWithReferrals = await Promise.all(
         (leaderboardData || []).map(async (user, index) => {
           const { count: referralCount } = await supabase
-            .from('referrals')
+            .from('referral_tracking')
             .select('*', { count: 'exact', head: true })
             .eq('referrer_id', user.id)
-            .eq('status', 'active')
 
           return {
             username: user.username,
@@ -178,14 +202,14 @@ export const useBountyData = (userId: string) => {
       const completedTasksKey = `completed_tasks_${userId}`
       const completedTaskIds = JSON.parse(localStorage.getItem(completedTasksKey) || '[]')
 
-      // Define available tasks (X tasks now require connection)
+      // Define available tasks
       const allTasks: BountyTask[] = [
         {
           id: 'join_telegram',
           title: 'Join Telegram',
           description: 'Join our official Telegram community',
           platform: 'telegram',
-          points: 50,
+          points: 25, // Updated to match new point system
           status: 'not_started',
           action_url: 'https://t.me/pumpeddotfun',
           verification_type: 'manual',
@@ -196,22 +220,22 @@ export const useBountyData = (userId: string) => {
           title: 'Follow @pumpeddotfun',
           description: 'Follow @pumpeddotfun on X (Twitter)',
           platform: 'x',
-          points: 50,
+          points: 25, // Updated to match new point system
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun',
           verification_type: 'manual',
-          requires_connection: true // X tasks now require connection
+          requires_connection: true
         },
         {
           id: 'repost_launch',
           title: 'Repost Launch Post',
           description: 'Repost our latest launch announcement',
           platform: 'x',
-          points: 75,
+          points: 50, // Bonus task
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun/status/123456789',
           verification_type: 'manual',
-          requires_connection: true // X tasks now require connection
+          requires_connection: true
         }
       ]
 
