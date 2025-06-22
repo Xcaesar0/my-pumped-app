@@ -106,7 +106,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     // For X tasks, show development message
     if (platform === 'x') {
       setShowXDevMessage(true)
-      setTimeout(() => setShowXDevMessage(false), 4000)
+      setTimeout(() => setShowXDevMessage(false), 3000)
     }
 
     // If task is not started, begin it
