@@ -165,7 +165,7 @@ export const useBountyData = (userId: string) => {
       const completedTasksKey = `completed_tasks_${userId}`
       const completedTaskIds = JSON.parse(localStorage.getItem(completedTasksKey) || '[]')
 
-      // Define available tasks (X tasks no longer require connection)
+      // Define available tasks (X tasks now require connection)
       const allTasks: BountyTask[] = [
         {
           id: 'join_telegram',
@@ -187,7 +187,7 @@ export const useBountyData = (userId: string) => {
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun',
           verification_type: 'manual',
-          requires_connection: false // X tasks no longer require connection
+          requires_connection: true // X tasks now require connection
         },
         {
           id: 'repost_launch',
@@ -198,7 +198,7 @@ export const useBountyData = (userId: string) => {
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun/status/123456789',
           verification_type: 'manual',
-          requires_connection: false // X tasks no longer require connection
+          requires_connection: true // X tasks now require connection
         }
       ]
 
@@ -209,12 +209,15 @@ export const useBountyData = (userId: string) => {
           return { ...task, status: 'completed' as const }
         }
         
-        // Only Telegram tasks require connection now
+        // Check if user has required connection for auto-completion
         if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
           return { ...task, status: 'completed' as const }
         }
         
-        // X tasks are available to everyone
+        if (task.platform === 'x' && connectedPlatforms.includes('x')) {
+          return { ...task, status: 'completed' as const }
+        }
+        
         return task
       })
 

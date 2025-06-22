@@ -1,9 +1,8 @@
-import { SocialConnection } from '../lib/supabase'
+import { SocialConnection, signInWithXAuth } from '../lib/supabase'
 import { encryptToken } from '../utils/encryption'
 import { supabase } from '../lib/supabase'
 
 // Telegram Bot Configuration
-const TELEGRAM_BOT_TOKEN = import.meta.env.VITE_TELEGRAM_BOT_TOKEN
 const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME
 
 export interface TelegramAuthResult {
@@ -77,14 +76,6 @@ export const verifyTelegramAuth = (authData: TelegramAuthResult): { success: boo
     }
 
     // In development or if bot token is not configured, skip hash verification
-    if (!TELEGRAM_BOT_TOKEN || TELEGRAM_BOT_TOKEN === 'your_bot_token') {
-      console.warn('Telegram bot token not configured, skipping hash verification')
-      return { success: true }
-    }
-
-    // For production with bot token, we would verify the hash here
-    // But since we're in a browser environment, we'll skip crypto verification
-    // and rely on Telegram's built-in security
     console.log('Telegram auth verification passed')
     return { success: true }
     
@@ -124,7 +115,15 @@ export const updateUsername = async (userId: string, newUsername: string) => {
   return data
 }
 
-// X Auth is now disabled - show development message
+// X (Twitter) Authentication via Auth0
 export const initiateXAuth = async () => {
-  throw new Error('X (Twitter) integration is currently under development. Please check back later!')
+  try {
+    console.log('Initiating X (Twitter) authentication via Auth0...')
+    const result = await signInWithXAuth()
+    console.log('X auth initiated successfully:', result)
+    return result
+  } catch (error) {
+    console.error('Error initiating X auth:', error)
+    throw error
+  }
 }

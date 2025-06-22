@@ -1,10 +1,11 @@
 import React, { useState } from 'react'
-import { X, Settings, LogOut, Unlink, AlertCircle } from 'lucide-react'
+import { X, Settings, LogOut, Unlink } from 'lucide-react'
 import { User } from '../lib/supabase'
 import { useSocialConnections } from '../hooks/useSocialConnections'
 import { useDisconnect } from 'wagmi'
 import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
+import XIcon from './icons/XIcon'
 import { initiateXAuth } from '../services/socialAuth'
 
 interface ProfileSettingsModalProps {
@@ -22,7 +23,6 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const { disconnect } = useDisconnect()
   
   const [socialModal, setSocialModal] = useState<'telegram' | null>(null)
-  const [showXMessage, setShowXMessage] = useState(false)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -40,22 +40,12 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleConnectX = async () => {
-    setShowXMessage(true)
-    setTimeout(() => setShowXMessage(false), 3000)
+    try {
+      await initiateXAuth()
+    } catch (error) {
+      console.error('Failed to connect X account:', error)
+    }
   }
-  
-  const XIcon = () => (
-    <svg 
-      width="24" 
-      height="24"
-      viewBox="0 0 24 24" 
-      fill="none" 
-      xmlns="http://www.w3.org/2000/svg"
-      className="w-5 h-5 text-white"
-    >
-      <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.847h-7.407l-6.378-7.63-7.634 7.63H.887l8.44-9.74L0 1.154h7.594l5.96 7.14L18.901 1.153zm-1.8 20.32h2.89l-16.88-19.82H1.54l16.88 19.82z" fill="currentColor"/>
-    </svg>
-  )
 
   return (
     <>
@@ -128,26 +118,28 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                 style={{ backgroundColor: '#262626' }}
               >
                 <div className="flex items-center space-x-3">
-                  <XIcon />
+                  <XIcon className="w-5 h-5 text-white" />
                   <span className="text-sm font-medium text-white">X (Twitter)</span>
                 </div>
-                <button
-                  onClick={handleConnectX}
-                  className="px-3 py-1 text-xs font-medium bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                >
-                  Connect
-                </button>
+                {connectionsLoading ? (
+                  <span className="text-xs text-gray-400">Loading...</span>
+                ) : xConnection ? (
+                  <button
+                    onClick={() => handleDisconnectSocial('x')}
+                    className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
+                  >
+                    <Unlink className="w-3 h-3" />
+                    <span>Disconnect</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={handleConnectX}
+                    className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
+                  >
+                    Connect
+                  </button>
+                )}
               </div>
-              
-              {/* Development Message */}
-              {showXMessage && (
-                <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
-                  <div className="flex items-center space-x-2">
-                    <AlertCircle className="w-4 h-4 text-orange-400" />
-                    <span className="text-sm text-orange-400">X integration is under development</span>
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 

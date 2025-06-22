@@ -72,6 +72,9 @@ export interface SocialConnection {
   platform_username: string
   connected_at: string
   is_active: boolean
+  auth_provider?: string
+  kinde_connection_id?: string
+  provider_metadata?: any
 }
 
 export interface Referral {
@@ -84,6 +87,26 @@ export interface Referral {
   status: 'pending' | 'completed' | 'cancelled' | 'active' | 'expired' | 'invalid'
   activated_at?: string
   expires_at?: string
+}
+
+// X (Twitter) Authentication via Auth0
+export const signInWithXAuth = async () => {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'auth0',
+    options: {
+      redirectTo: `${window.location.origin}/`,
+      queryParams: {
+        connection: 'twitter'
+      }
+    }
+  })
+
+  if (error) {
+    console.error('Error signing in with X (Auth0):', error)
+    throw error
+  }
+
+  return data
 }
 
 // Social media integration functions
