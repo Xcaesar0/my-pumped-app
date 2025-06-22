@@ -56,7 +56,6 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | null>(null)
   const [copiedReferral, setCopiedReferral] = useState(false)
-  const [showXDevMessage, setShowXDevMessage] = useState(false)
   const [taskCompletionMessage, setTaskCompletionMessage] = useState<string | null>(null)
 
   const {
@@ -103,10 +102,21 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
       }
     }
 
-    // For X tasks, show development message
+    // For X tasks, automatically complete and award points
     if (platform === 'x') {
-      setShowXDevMessage(true)
-      setTimeout(() => setShowXDevMessage(false), 3000)
+      // If task is not started, begin it
+      if (task?.status === 'not_started') {
+        await beginTask(taskId)
+      } else if (task?.status === 'in_progress') {
+        const result = await verifyTask(taskId)
+        
+        // Show completion message for X tasks
+        if (result?.success && task.platform === 'x') {
+          setTaskCompletionMessage(`Task completed! You earned ${result.pointsAwarded} points.`)
+          setTimeout(() => setTaskCompletionMessage(null), 4000)
+        }
+      }
+      return
     }
 
     // If task is not started, begin it
@@ -115,8 +125,8 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     } else if (task?.status === 'in_progress') {
       const result = await verifyTask(taskId)
       
-      // Show completion message for X tasks
-      if (result?.success && task.platform === 'x') {
+      // Show completion message
+      if (result?.success) {
         setTaskCompletionMessage(`Task completed! You earned ${result.pointsAwarded} points.`)
         setTimeout(() => setTaskCompletionMessage(null), 4000)
       }
@@ -187,20 +197,6 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
               Complete social media tasks, invite friends, and climb the leaderboard to earn exclusive rewards
             </p>
           </div>
-
-          {/* Development Message for X Tasks */}
-          {showXDevMessage && (
-            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-3">
-              <div className="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-sm">
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p className="text-sm font-medium">
-                    X (Twitter) integration is under development. Task opened in new tab!
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Task Completion Message */}
           {taskCompletionMessage && (
