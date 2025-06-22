@@ -82,7 +82,7 @@ const Logo: React.FC<LogoProps> = ({ onClick, className = "" }) => {
       
       {/* Text */}
       <h1 className="text-xl sm:text-2xl font-bold text-white">
-        Pumped.fun
+        Pumped.Fun
       </h1>
     </div>
   );

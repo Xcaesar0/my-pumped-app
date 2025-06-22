@@ -101,20 +101,20 @@ const Hero = () => {
         </div>
       )}
 
-      <div className="relative z-10 text-center max-w-7xl mx-auto w-full">
+      <div className="relative z-10 text-center max-w-7xl mx-auto w-full" style={{ transform: 'translateY(-10%)' }}>
         <div className="mb-6 sm:mb-8 md:mb-12">
-          {/* First line - "Are You Ready To Go.." */}
+          {/* First line - "Are You Ready To Go.." - Made 33% smaller */}
           <div className="px-1 flex justify-center mb-2 sm:mb-4">
             <div className="text-center">
-              <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-normal text-white leading-tight tracking-wide">
+              <h1 className="text-2xl xs:text-3xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-5xl font-normal text-white leading-tight tracking-wide">
                 Are You Ready To Go..
               </h1>
             </div>
           </div>
-          {/* Second line - "Beyond The Pump?" */}
+          {/* Second line - "Beyond The Pump?" - Made 25% smaller */}
           <div className="px-1 flex justify-center">
             <div className="text-center">
-              <h2 className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-white leading-tight tracking-wide">
+              <h2 className="text-3xl xs:text-4xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold text-white leading-tight tracking-wide">
                 Beyond The Pump?
               </h2>
             </div>
