@@ -29,13 +29,16 @@ export const useUser = () => {
   const handleWalletConnection = async () => {
     if (!address) return
 
+    console.log('🔄 Starting wallet connection for address:', address)
     setLoading(true)
     setError(null)
 
     try {
       const normalizedAddress = address.toLowerCase()
+      console.log('📝 Normalized address:', normalizedAddress)
       
       // First, try to get existing user
+      console.log('🔍 Checking for existing user...')
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
         .select('*')
@@ -43,7 +46,7 @@ export const useUser = () => {
         .maybeSingle()
 
       if (fetchError) {
-        console.error('Error fetching user:', fetchError)
+        console.error('❌ Error fetching user:', fetchError)
         throw fetchError
       }
 
@@ -51,14 +54,16 @@ export const useUser = () => {
       let userIsNew = false
 
       if (existingUser) {
-        console.log('Existing user found:', existingUser)
+        console.log('✅ Existing user found:', existingUser)
         finalUser = existingUser
         userIsNew = false
       } else {
         // Create new user using upsert to handle race conditions
-        console.log('Creating new user for address:', normalizedAddress)
+        console.log('🆕 Creating new user for address:', normalizedAddress)
         
         const username = generateUsername()
+        console.log('🎯 Generated username:', username)
+        
         const newUserData: Omit<User, 'id' | 'referral_code'> = {
           wallet_address: normalizedAddress,
           username,
@@ -66,6 +71,8 @@ export const useUser = () => {
           current_points: 0,
           current_rank: 0
         }
+
+        console.log('📊 New user data being sent to Supabase:', newUserData)
 
         // Use upsert to handle potential race conditions
         const { data: upsertedUser, error: upsertError } = await supabase
@@ -78,10 +85,11 @@ export const useUser = () => {
           .single()
 
         if (upsertError) {
-          console.error('Error upserting user:', upsertError)
+          console.error('❌ Error upserting user:', upsertError)
           
           // If upsert fails, try to fetch the existing user one more time
           // This handles the case where another process created the user between our check and upsert
+          console.log('🔄 Retrying to fetch user after upsert failure...')
           const { data: retryUser, error: retryError } = await supabase
             .from('users')
             .select('*')
@@ -89,27 +97,29 @@ export const useUser = () => {
             .single()
 
           if (retryError) {
-            console.error('Error fetching user after upsert failure:', retryError)
+            console.error('❌ Error fetching user after upsert failure:', retryError)
             throw upsertError // Throw the original upsert error
           }
 
-          console.log('Found existing user after upsert failure:', retryUser)
+          console.log('✅ Found existing user after upsert failure:', retryUser)
           finalUser = retryUser
           userIsNew = false
         } else {
-          console.log('New user created:', upsertedUser)
+          console.log('✅ New user created successfully:', upsertedUser)
           finalUser = upsertedUser
           userIsNew = true
         }
       }
 
       // Set user state immediately to prevent UI flickering
+      console.log('🎯 Setting user state:', finalUser)
       setUser(finalUser)
       setIsNewUser(userIsNew)
       setLoading(false) // Set loading to false immediately after setting user
       
       // Process any pending referral in the background (non-blocking)
       if (userIsNew || !finalUser.current_points) {
+        console.log('🔄 Processing pending referral in background...')
         // Use setTimeout to make this truly async and non-blocking
         setTimeout(() => {
           processReferralIfPending(finalUser.id)
@@ -118,12 +128,16 @@ export const useUser = () => {
       
       // Only show referral modal for new users who don't have a pending referral and haven't used a code
       if (userIsNew) {
+        console.log('🆕 New user - checking for referral modal...')
         // Check for existing referral in background
         setTimeout(async () => {
           const hasExistingReferral = await checkExistingReferral(finalUser.id)
           const pendingReferral = referralCode
           
+          console.log('📊 Referral check results:', { hasExistingReferral, pendingReferral })
+          
           if (!pendingReferral && !hasExistingReferral) {
+            console.log('🎯 Showing referral modal for new user')
             // Delay showing modal slightly to ensure smooth transition
             setTimeout(() => {
               setShowReferralModal(true)
@@ -133,7 +147,7 @@ export const useUser = () => {
       }
 
     } catch (err) {
-      console.error('Error handling wallet connection:', err)
+      console.error('❌ Top-level error in handleWalletConnection:', err)
       setError(err instanceof Error ? err.message : 'Failed to connect user')
       setLoading(false)
     }

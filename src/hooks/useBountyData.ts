@@ -251,9 +251,10 @@ export const useBountyData = (userId: string) => {
           return { ...task, status: 'completed' as const }
         }
         
-        if (task.platform === 'x' && connectedPlatforms.includes('x')) {
-          return { ...task, status: 'completed' as const }
-        }
+        // X tasks are disabled - don't auto-complete them
+        // if (task.platform === 'x' && connectedPlatforms.includes('x')) {
+        //   return { ...task, status: 'completed' as const }
+        // }
         
         return task
       })
@@ -299,34 +300,17 @@ export const useBountyData = (userId: string) => {
         )
       }))
 
-      // For X tasks, automatically complete and award points
+      // For X tasks, show development message instead of auto-completing
       if (task.platform === 'x') {
-        // Award points using the increment function
-        const { error: pointsError } = await supabase.rpc('increment_user_points', {
-          user_id_param: userId,
-          points_to_add: task.points
-        })
-
-        if (pointsError) {
-          console.warn('Failed to award points:', pointsError)
-        }
-
-        // Move task to completed
+        // Don't auto-complete X tasks since connections are disabled
         setBountyTasks(prev => ({
-          active: prev.active.filter(t => t.id !== taskId),
-          completed: [...prev.completed, { ...task, status: 'completed' }]
+          ...prev,
+          active: prev.active.map(task =>
+            task.id === taskId ? { ...task, status: 'in_progress' } : task
+          )
         }))
-
-        // Save completed task to localStorage
-        const completedTasksKey = `completed_tasks_${userId}`
-        const completedTaskIds = JSON.parse(localStorage.getItem(completedTasksKey) || '[]')
-        completedTaskIds.push(taskId)
-        localStorage.setItem(completedTasksKey, JSON.stringify(completedTaskIds))
-
-        // Refresh user stats to show updated points
-        await loadUserStats()
         
-        return { success: true, pointsAwarded: task.points }
+        return { success: false, message: 'X integration is currently disabled' }
       }
 
       // For other tasks, simulate verification delay

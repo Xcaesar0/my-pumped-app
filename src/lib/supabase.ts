@@ -5,7 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 // Check if environment variables are properly configured
 if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error(`
+  console.warn(`
     Missing Supabase environment variables. 
     
     Please set up your Supabase connection by:
@@ -15,21 +15,31 @@ if (!supabaseUrl || !supabaseAnonKey) {
        - VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
     3. You can find these values in your Supabase project settings under 'API'
     4. Restart your development server after updating the .env file
-  `)
-}
-
-// Validate URL format
-try {
-  new URL(supabaseUrl)
-} catch (error) {
-  throw new Error(`
-    Invalid Supabase URL format: ${supabaseUrl}
     
-    Please ensure your VITE_SUPABASE_URL is a valid URL (e.g., https://your-project.supabase.co)
+    Using placeholder values for now to allow the app to load.
   `)
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Use placeholder values if environment variables are not set
+const effectiveSupabaseUrl = supabaseUrl || 'https://placeholder.supabase.co'
+const effectiveSupabaseAnonKey = supabaseAnonKey || 'placeholder_key'
+
+// Validate URL format only if we have a real URL
+if (supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co') {
+  try {
+    new URL(supabaseUrl)
+  } catch (error) {
+    console.error(`
+      Invalid Supabase URL format: ${supabaseUrl}
+      
+      Please ensure your VITE_SUPABASE_URL is a valid URL (e.g., https://your-project.supabase.co)
+    `)
+  }
+}
+
+export const supabase = createClient(effectiveSupabaseUrl, effectiveSupabaseAnonKey)
+
+console.log('✅ Supabase client created successfully')
 
 export interface User {
   id: string
@@ -39,7 +49,6 @@ export interface User {
   current_points: number
   current_rank: number
   referral_code?: string
-  x_connected_at?: string
   is_active?: boolean
   kinde_user_id?: string
   points?: number
@@ -89,24 +98,7 @@ export interface Referral {
   expires_at?: string
 }
 
-// X (Twitter) Authentication via Supabase
-export const signInWithXAuth = async () => {
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'twitter',
-    options: {
-      redirectTo: `${window.location.origin}/`,
-    }
-  })
-
-  if (error) {
-    console.error('Error signing in with X (Twitter):', error)
-    throw error
-  }
-
-  return data
-}
-
-// Social media integration functions
+// Social media integration functions (kept for UI purposes, but X connection disabled)
 export const getSocialConnections = async (userId: string): Promise<SocialConnection[]> => {
   const { data, error } = await supabase
     .from('social_connections')

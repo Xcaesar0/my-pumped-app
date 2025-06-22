@@ -26,6 +26,15 @@ const Hero = () => {
   } = useUser()
   const { referralCode, referrerUsername, isLoadingReferrer } = useReferralInfo()
 
+  // Debug logging
+  console.log('🎭 Hero component state:', {
+    isConnected,
+    user: user ? { id: user.id, username: user.username } : null,
+    loading,
+    isNewUser,
+    showReferralModal
+  })
+
   const handleYesClick = () => {
     open()
   }
@@ -43,6 +52,7 @@ const Hero = () => {
 
   // Show loading only when actually loading and no user exists yet
   if (loading && !user) {
+    console.log('⏳ Hero: Showing loading state...')
     return (
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6" style={{ backgroundColor: '#1A1A1A' }}>
         <div className="text-center">
@@ -57,6 +67,7 @@ const Hero = () => {
 
   // Show connected hero immediately when user exists, even if still loading background tasks
   if (isConnected && user) {
+    console.log('✅ Hero: Showing ConnectedHero for user:', user.username)
     return (
       <>
         <ConnectedHero user={user} />
@@ -71,6 +82,7 @@ const Hero = () => {
     )
   }
 
+  console.log('🏠 Hero: Showing landing page (not connected or no user)')
   return (
     <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-3 sm:px-6" style={{ backgroundColor: '#1A1A1A' }}>
       {/* LetterGlitch background effect */}

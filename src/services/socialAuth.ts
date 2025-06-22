@@ -1,4 +1,4 @@
-import { SocialConnection, signInWithXAuth } from '../lib/supabase'
+import { SocialConnection } from '../lib/supabase'
 import { encryptToken } from '../utils/encryption'
 import { supabase } from '../lib/supabase'
 
@@ -132,38 +132,4 @@ export const updateUsername = async (userId: string, newUsername: string) => {
   }
 
   return data
-}
-
-// X (Twitter) Authentication via Supabase
-export const initiateXAuth = async () => {
-  try {
-    console.log('Initiating X (Twitter) authentication via Supabase...')
-    const result = await signInWithXAuth()
-    console.log('X auth initiated successfully:', result)
-    return result
-  } catch (error) {
-    console.error('Error initiating X auth:', error)
-    throw error
-  }
-}
-
-// Process X connection points
-export const processXConnectionPoints = async (userId: string) => {
-  try {
-    const { data: pointsResult, error: pointsError } = await supabase.rpc('process_social_connection_points', {
-      user_id_param: userId,
-      platform_param: 'x'
-    })
-
-    if (pointsError) {
-      console.warn('Failed to process X connection points:', pointsError)
-      return null
-    }
-
-    console.log('X connection points processed:', pointsResult)
-    return pointsResult
-  } catch (error) {
-    console.warn('Error processing X connection points:', error)
-    return null
-  }
 }

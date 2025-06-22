@@ -1,12 +1,12 @@
 import React, { useState } from 'react'
-import { X, Settings, LogOut, Unlink } from 'lucide-react'
+import { X, Settings, LogOut, Unlink, AlertCircle } from 'lucide-react'
 import { User } from '../lib/supabase'
 import { useSocialConnections } from '../hooks/useSocialConnections'
 import { useDisconnect } from 'wagmi'
 import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
 import XIcon from './icons/XIcon'
-import { initiateXAuth } from '../services/socialAuth'
+import { supabase } from '../lib/supabase'
 
 interface ProfileSettingsModalProps {
   user: User
@@ -22,7 +22,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   
   const { disconnect } = useDisconnect()
   
-  const [socialModal, setSocialModal] = useState<'telegram' | null>(null)
+  const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -41,9 +41,24 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
 
   const handleConnectX = async () => {
     try {
-      await initiateXAuth()
-    } catch (error) {
-      console.error('Failed to connect X account:', error)
+      // Call the Edge Function to get the authorization URL
+      const { data, error } = await supabase.functions.invoke('x-oauth', {
+        body: {
+          action: 'get_auth_url'
+        }
+      })
+
+      if (error) {
+        console.error('Error getting X auth URL:', error)
+        return
+      }
+
+      if (data?.auth_url) {
+        // Redirect to X authorization page
+        window.location.href = data.auth_url
+      }
+    } catch (err) {
+      console.error('Error initiating X connection:', err)
     }
   }
 
@@ -60,7 +75,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
             <Settings className="w-6 h-6 text-gray-400" />
-            <h2 className="text-xl font-bold text-white">Settings</h2>
+            <h2 className="text-xl font-bold text-white">Profile Settings</h2>
           </div>
           <button
             onClick={onClose}
@@ -70,19 +85,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
           </button>
         </div>
 
-        <div className="space-y-4">
-          <div>
-            <h3 className="text-sm font-medium text-gray-400 mb-2">Account</h3>
-            <div className="p-4 rounded-lg" style={{ backgroundColor: '#262626' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-white">{user.username}</p>
-                  <p className="text-xs text-gray-400 truncate">{user.wallet_address}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-          
+        <div className="space-y-6">
           <div>
             <h3 className="text-sm font-medium text-gray-400 mb-2">Social Connections</h3>
             <div className="space-y-3">
@@ -113,6 +116,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   </button>
                 )}
               </div>
+              
               <div
                 className="w-full flex items-center justify-between p-4 rounded-lg"
                 style={{ backgroundColor: '#262626' }}

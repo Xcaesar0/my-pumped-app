@@ -53,9 +53,8 @@ interface BountyHunterDashboardProps {
 
 const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) => {
   const [showProfileModal, setShowProfileModal] = useState(false)
-  const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | null>(null)
+  const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | 'x' | null>(null)
   const [copiedReferral, setCopiedReferral] = useState(false)
-  const [showXDevMessage, setShowXDevMessage] = useState(false)
   const [taskCompletionMessage, setTaskCompletionMessage] = useState<string | null>(null)
 
   const {
@@ -102,10 +101,15 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
       }
     }
 
-    // For X tasks, show development message
-    if (platform === 'x') {
-      setShowXDevMessage(true)
-      setTimeout(() => setShowXDevMessage(false), 3000)
+    // Check if user has the required connection for X tasks
+    if (task?.requires_connection && platform === 'x') {
+      const connection = getConnectionByPlatform(platform)
+      
+      // If no connection exists, show the connection required modal
+      if (!connection || !connection.is_active) {
+        setShowConnectionModal(platform)
+        return
+      }
     }
 
     // If task is not started, begin it
@@ -114,15 +118,15 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     } else if (task?.status === 'in_progress') {
       const result = await verifyTask(taskId)
       
-      // Show completion message for X tasks
-      if (result?.success && task.platform === 'x') {
-        setTaskCompletionMessage(`Task completed! You earned ${result.pointsAwarded} points.`)
+      // Show completion message for completed tasks
+      if (result?.success) {
+        setTaskCompletionMessage(`Task completed! You earned points.`)
         setTimeout(() => setTaskCompletionMessage(null), 4000)
       }
     }
   }
 
-  const handleConnectSocial = (platform: 'telegram') => {
+  const handleConnectSocial = (platform: 'telegram' | 'x') => {
     setShowConnectionModal(null)
     setShowProfileModal(true)
   }
@@ -186,20 +190,6 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
               Complete social media tasks, invite friends, and climb the leaderboard to earn exclusive rewards
             </p>
           </div>
-
-          {/* Development Message for X Tasks */}
-          {showXDevMessage && (
-            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-3">
-              <div className="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-sm">
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                  <p className="text-sm font-medium">
-                    X (Twitter) integration is under development. Task opened in new tab!
-                  </p>
-                </div>
-              </div>
-            </div>
-          )}
 
           {/* Task Completion Message */}
           {taskCompletionMessage && (
