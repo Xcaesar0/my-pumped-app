@@ -41,19 +41,21 @@ const Hero = () => {
     return <ReferralPage referralCode={referralCodeFromPath} />
   }
 
-  if (loading) {
+  // Show loading only when actually loading and no user exists yet
+  if (loading && !user) {
     return (
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6" style={{ backgroundColor: '#1A1A1A' }}>
         <div className="text-center">
           <div className="animate-spin w-12 h-12 border-4 border-blue-400 border-t-transparent rounded-full mx-auto mb-4"></div>
           <p className="text-white text-lg">
-            {isConnected ? 'Loading your profile...' : 'Connecting your wallet...'}
+            Setting up your profile...
           </p>
         </div>
       </div>
     )
   }
 
+  // Show connected hero immediately when user exists, even if still loading background tasks
   if (isConnected && user) {
     return (
       <>
