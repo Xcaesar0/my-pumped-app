@@ -115,10 +115,10 @@ export const updateUsername = async (userId: string, newUsername: string) => {
   return data
 }
 
-// X (Twitter) Authentication via Auth0
+// X (Twitter) Authentication via Supabase
 export const initiateXAuth = async () => {
   try {
-    console.log('Initiating X (Twitter) authentication via Auth0...')
+    console.log('Initiating X (Twitter) authentication via Supabase...')
     const result = await signInWithXAuth()
     console.log('X auth initiated successfully:', result)
     return result

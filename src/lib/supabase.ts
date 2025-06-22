@@ -89,20 +89,17 @@ export interface Referral {
   expires_at?: string
 }
 
-// X (Twitter) Authentication via Auth0
+// X (Twitter) Authentication via Supabase
 export const signInWithXAuth = async () => {
   const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'auth0',
+    provider: 'twitter',
     options: {
       redirectTo: `${window.location.origin}/`,
-      queryParams: {
-        connection: 'twitter'
-      }
     }
   })
 
   if (error) {
-    console.error('Error signing in with X (Auth0):', error)
+    console.error('Error signing in with X (Twitter):', error)
     throw error
   }
 

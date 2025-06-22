@@ -46,17 +46,20 @@ function AppContent() {
       if ((event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') && session) {
         console.log('Auth state change:', event, session)
         
-        // Handle Auth0 (X/Twitter) authentication
-        if (session.user.app_metadata.provider === 'auth0' && user) {
-          console.log('Processing Auth0 X connection for user:', user.id)
+        // Handle Twitter authentication via Supabase
+        if (session.user.app_metadata.provider === 'twitter' && user) {
+          console.log('Processing Twitter connection for user:', user.id)
           
           try {
-            // Extract user info from Auth0 session
-            const platformUserId = session.user.user_metadata.sub || session.user.id
-            const platformUsername = session.user.user_metadata.nickname || 
-                                   session.user.user_metadata.name || 
+            // Extract user info from Twitter session
+            const platformUserId = session.user.user_metadata.provider_id || 
+                                 session.user.user_metadata.sub || 
+                                 session.user.id
+            const platformUsername = session.user.user_metadata.user_name || 
+                                   session.user.user_metadata.screen_name ||
                                    session.user.user_metadata.preferred_username ||
-                                   `user_${platformUserId.split('|').pop()}`
+                                   session.user.user_metadata.name ||
+                                   `user_${platformUserId}`
             
             // Create X social connection
             await addConnection({
@@ -65,28 +68,27 @@ function AppContent() {
               platform_user_id: platformUserId,
               platform_username: platformUsername,
               is_active: true,
-              auth_provider: 'auth0',
+              auth_provider: 'supabase',
               kinde_connection_id: session.user.id,
               provider_metadata: session.user.user_metadata
             })
             
-            // Update user record with Auth0 info
+            // Update user record with Twitter connection info
             const { error: updateError } = await supabase
               .from('users')
               .update({
-                kinde_user_id: session.user.id,
                 x_connected_at: new Date().toISOString()
               })
               .eq('id', user.id)
             
             if (updateError) {
-              console.error('Error updating user with Auth0 info:', updateError)
+              console.error('Error updating user with Twitter info:', updateError)
             } else {
               console.log('Successfully updated user with X connection')
             }
             
           } catch (error) {
-            console.error('Error processing Auth0 X connection:', error)
+            console.error('Error processing Twitter connection:', error)
           }
         }
         
