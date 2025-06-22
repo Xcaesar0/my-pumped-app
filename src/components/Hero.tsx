@@ -69,7 +69,7 @@ const Hero = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6" style={{ backgroundColor: '#1A1A1A' }}>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-3 sm:px-6" style={{ backgroundColor: '#1A1A1A' }}>
       {/* Particle effect background - only on main hero screen */}
       <div className="absolute inset-0 z-0">
         <Particles
@@ -88,8 +88,8 @@ const Hero = () => {
       </div>
 
       {referralCode && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-          <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg">
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-3">
+          <div className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-sm text-center">
             <p className="text-sm font-medium">
               {isLoadingReferrer
                 ? 'Checking invite...'
@@ -101,11 +101,12 @@ const Hero = () => {
         </div>
       )}
 
-      <div className="relative z-10 text-center max-w-6xl mx-auto w-full">
-        <div className="mb-8 sm:mb-12">
-          <div className="px-2 flex justify-center">
+      <div className="relative z-10 text-center max-w-7xl mx-auto w-full">
+        <div className="mb-6 sm:mb-8 md:mb-12">
+          {/* First line - "Are You Ready To Go.." */}
+          <div className="px-1 flex justify-center mb-2 sm:mb-4">
             <FuzzyText
-              fontSize="clamp(1.9rem, 8vw, 4.56rem)"
+              fontSize="clamp(2.5rem, 12vw, 5.5rem)"
               fontWeight={400}
               color="#ffffff"
               enableHover={true}
@@ -115,9 +116,10 @@ const Hero = () => {
               Are You Ready To Go..
             </FuzzyText>
           </div>
-          <div className="px-2 flex justify-center">
+          {/* Second line - "Beyond The Pump?" */}
+          <div className="px-1 flex justify-center">
             <FuzzyText
-              fontSize="clamp(3.5rem, 16vw, 8rem)"
+              fontSize="clamp(4rem, 18vw, 9rem)"
               fontWeight={700}
               color="#ffffff"
               enableHover={true}
@@ -129,9 +131,9 @@ const Hero = () => {
           </div>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mt-8 sm:mt-12 lg:mt-16 px-4">
-          <div className="relative w-full sm:w-auto">
-            <div className={`absolute -top-4 sm:-top-6 -right-1 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 z-20 transition-all duration-300 ${
+        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 justify-center items-center mt-8 sm:mt-12 lg:mt-16 px-2 sm:px-4">
+          <div className="relative w-full sm:w-auto max-w-xs sm:max-w-none">
+            <div className={`absolute -top-3 sm:-top-4 md:-top-6 -right-1 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 z-20 transition-all duration-300 ${
               hoveredButton === 'yes' ? 'twinkle-red' : ''
             }`}>
               <img 
@@ -154,19 +156,19 @@ const Hero = () => {
               onClick={handleYesClick}
               onMouseEnter={() => setHoveredButton('yes')}
               onMouseLeave={() => setHoveredButton(null)}
-              className="relative group w-full sm:w-auto px-8 sm:px-10 lg:px-12 py-4 sm:py-5 lg:py-6 text-lg sm:text-xl lg:text-2xl font-bold text-white rounded-xl sm:rounded-2xl overflow-hidden transition-all duration-300 transform hover:scale-105 sm:hover:scale-110 active:scale-95 min-w-[140px] sm:min-w-[160px]"
+              className="relative group w-full sm:w-auto px-6 sm:px-8 md:px-10 lg:px-12 py-3 sm:py-4 md:py-5 lg:py-6 text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white rounded-lg sm:rounded-xl md:rounded-2xl overflow-hidden transition-all duration-300 transform hover:scale-105 sm:hover:scale-110 active:scale-95 min-w-[120px] sm:min-w-[140px] md:min-w-[160px]"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-red-600 to-red-700 group-hover:from-red-500 group-hover:to-red-600 transition-all duration-300" />
               <div className={`absolute inset-0 bg-gradient-to-r from-red-400 to-red-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                 hoveredButton === 'yes' ? 'animate-pulse' : ''
               }`} />
-              <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_20px_rgba(239,68,68,0.4)] sm:shadow-[0_0_30px_rgba(239,68,68,0.5)]" />
+              <div className="absolute inset-0 rounded-lg sm:rounded-xl md:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_15px_rgba(239,68,68,0.4)] sm:shadow-[0_0_20px_rgba(239,68,68,0.4)] md:shadow-[0_0_30px_rgba(239,68,68,0.5)]" />
               <span className="relative z-10">YES</span>
             </button>
           </div>
 
-          <div className="relative w-full sm:w-auto">
-            <div className={`absolute -top-4 sm:-top-6 -right-1 sm:-right-2 w-6 h-6 sm:w-8 sm:h-8 z-20 transition-all duration-300 ${
+          <div className="relative w-full sm:w-auto max-w-xs sm:max-w-none">
+            <div className={`absolute -top-3 sm:-top-4 md:-top-6 -right-1 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 z-20 transition-all duration-300 ${
               hoveredButton === 'no' ? 'twinkle-blue' : ''
             }`}>
               <img 
@@ -189,13 +191,13 @@ const Hero = () => {
               onClick={handleNoClick}
               onMouseEnter={() => setHoveredButton('no')}
               onMouseLeave={() => setHoveredButton(null)}
-              className="relative group w-full sm:w-auto px-8 sm:px-10 lg:px-12 py-4 sm:py-5 lg:py-6 text-lg sm:text-xl lg:text-2xl font-bold text-white rounded-xl sm:rounded-2xl overflow-hidden transition-all duration-300 transform hover:scale-105 sm:hover:scale-110 active:scale-95 min-w-[140px] sm:min-w-[160px]"
+              className="relative group w-full sm:w-auto px-6 sm:px-8 md:px-10 lg:px-12 py-3 sm:py-4 md:py-5 lg:py-6 text-base sm:text-lg md:text-xl lg:text-2xl font-bold text-white rounded-lg sm:rounded-xl md:rounded-2xl overflow-hidden transition-all duration-300 transform hover:scale-105 sm:hover:scale-110 active:scale-95 min-w-[120px] sm:min-w-[140px] md:min-w-[160px]"
             >
               <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-blue-700 group-hover:from-blue-500 group-hover:to-blue-600 transition-all duration-300" />
               <div className={`absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300 ${
                 hoveredButton === 'no' ? 'animate-pulse' : ''
               }`} />
-              <div className="absolute inset-0 rounded-xl sm:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_20px_rgba(59,130,246,0.4)] sm:shadow-[0_0_30px_rgba(59,130,246,0.5)]" />
+              <div className="absolute inset-0 rounded-lg sm:rounded-xl md:rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 shadow-[0_0_15px_rgba(59,130,246,0.4)] sm:shadow-[0_0_20px_rgba(59,130,246,0.4)] md:shadow-[0_0_30px_rgba(59,130,246,0.5)]" />
               <span className="relative z-10">NO</span>
             </button>
           </div>

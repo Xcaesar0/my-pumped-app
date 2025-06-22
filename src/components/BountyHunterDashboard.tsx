@@ -173,27 +173,27 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
 
   return (
     <>
-      <div className="min-h-screen px-4 sm:px-6 py-8" style={{ backgroundColor: '#1A1A1A' }}>
+      <div className="min-h-screen px-3 sm:px-4 md:px-6 py-6 sm:py-8" style={{ backgroundColor: '#1A1A1A' }}>
         <div className="max-w-7xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center space-x-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #52D593 0%, #4ade80 100%)' }}>
-                <Target className="w-6 h-6 text-white" />
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="flex items-center justify-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-gradient-to-br flex items-center justify-center" style={{ background: 'linear-gradient(135deg, #52D593 0%, #4ade80 100%)' }}>
+                <Target className="w-5 h-5 sm:w-6 sm:h-6 text-white" />
               </div>
-              <h1 className="text-4xl sm:text-5xl font-bold text-white">Bounty Hunter</h1>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white">Bounty Hunter</h1>
             </div>
-            <p className="text-lg text-gray-300 max-w-2xl mx-auto">
+            <p className="text-base sm:text-lg text-gray-300 max-w-2xl mx-auto px-4">
               Complete social media tasks, invite friends, and climb the leaderboard to earn exclusive rewards
             </p>
           </div>
 
           {/* Development Message for X Tasks */}
           {showXDevMessage && (
-            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-              <div className="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg">
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-3">
+              <div className="bg-orange-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-sm">
                 <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-4 h-4" />
+                  <AlertCircle className="w-4 h-4 flex-shrink-0" />
                   <p className="text-sm font-medium">
                     X (Twitter) integration is under development. Task opened in new tab!
                   </p>
@@ -204,10 +204,10 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
 
           {/* Task Completion Message */}
           {taskCompletionMessage && (
-            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50">
-              <div className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg">
+            <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 px-3">
+              <div className="bg-green-600 text-white px-4 py-2 rounded-lg shadow-lg max-w-sm">
                 <div className="flex items-center space-x-2">
-                  <CheckCircle className="w-4 h-4" />
+                  <CheckCircle className="w-4 h-4 flex-shrink-0" />
                   <p className="text-sm font-medium">{taskCompletionMessage}</p>
                 </div>
               </div>
@@ -215,48 +215,48 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
           )}
 
           {/* Main Dashboard Grid */}
-          <div className="grid grid-cols-1 lg:grid-cols-7 gap-6 lg:gap-8 mb-8">
+          <div className="grid grid-cols-1 lg:grid-cols-7 gap-4 sm:gap-6 lg:gap-8 mb-6 sm:mb-8">
             {/* Left Column: Global Leaderboard */}
             <div className="lg:col-span-2 order-2 lg:order-1">
               <div className="rounded-2xl border border-gray-700/50 overflow-hidden h-full" style={{ backgroundColor: '#171717' }}>
                 {/* Header */}
-                <div className="p-6 border-b border-gray-700/50">
-                  <div className="flex items-center space-x-3 mb-4">
-                    <Trophy className="w-5 h-5 text-yellow-400" />
-                    <h2 className="text-xl font-bold text-white">Global Leaderboard</h2>
+                <div className="p-4 sm:p-6 border-b border-gray-700/50">
+                  <div className="flex items-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+                    <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400" />
+                    <h2 className="text-lg sm:text-xl font-bold text-white">Global Leaderboard</h2>
                   </div>
                   
                   {/* Tabs */}
                   <div className="flex space-x-1 p-1 rounded-lg" style={{ backgroundColor: '#262626' }}>
                     <button
                       onClick={() => setActiveLeaderboardTab('referrers')}
-                      className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
                         activeLeaderboardTab === 'referrers'
                           ? 'text-white' 
                           : 'text-gray-400 hover:text-gray-300'
                       }`}
                       style={{ backgroundColor: activeLeaderboardTab === 'referrers' ? '#52D593' : 'transparent' }}
                     >
-                      <Users className="w-4 h-4" />
+                      <Users className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span>Referrers</span>
                     </button>
                     <button
                       onClick={() => setActiveLeaderboardTab('points')}
-                      className={`flex-1 flex items-center justify-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-all duration-200 ${
+                      className={`flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-md text-xs sm:text-sm font-medium transition-all duration-200 ${
                         activeLeaderboardTab === 'points'
                           ? 'text-white'
                           : 'text-gray-400 hover:text-gray-300'
                       }`}
                       style={{ backgroundColor: activeLeaderboardTab === 'points' ? '#52D593' : 'transparent' }}
                     >
-                      <Star className="w-4 h-4" />
+                      <Star className="w-3 h-3 sm:w-4 sm:h-4" />
                       <span>Points</span>
                     </button>
                   </div>
                 </div>
 
                 {/* Leaderboard Content */}
-                <div className="p-6 flex-1">
+                <div className="p-4 sm:p-6 flex-1">
                   {loading ? (
                     <div className="text-center py-8">
                       <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full mx-auto mb-4" style={{ borderColor: '#52D593', borderTopColor: 'transparent' }}></div>
@@ -279,15 +279,15 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                         >
                           <div className="flex items-center space-x-3">
                             {/* Rank */}
-                            <div className={`w-8 h-8 rounded-full flex items-center justify-center border ${getRankColor(entry.rank)}`}>
+                            <div className={`w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center border ${getRankColor(entry.rank)}`}>
                               {entry.rank <= 3 ? (
                                 getRankIcon(entry.rank)
                               ) : (
-                                <span className="text-sm font-medium">{entry.rank}</span>
+                                <span className="text-xs sm:text-sm font-medium">{entry.rank}</span>
                               )}
                             </div>
                             {/* User info */}
-                            <div className="flex-1">
+                            <div className="flex-1 min-w-0">
                               <p className="text-sm font-medium text-white truncate">{entry.username}</p>
                             </div>
                             {/* Points/Referrals */}
@@ -309,80 +309,80 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
             </div>
 
             {/* Middle Column: Your Stats & Referral */}
-            <div className="lg:col-span-3 order-1 lg:order-2 space-y-6">
+            <div className="lg:col-span-3 order-1 lg:order-2 space-y-4 sm:space-y-6">
               {/* Merged Stats and Referral Section */}
-              <div className="rounded-2xl border border-gray-700/50 p-6" style={{ backgroundColor: '#171717' }}>
+              <div className="rounded-2xl border border-gray-700/50 p-4 sm:p-6" style={{ backgroundColor: '#171717' }}>
                 {/* Refer & Earn */}
-                <div className="text-center mb-8">
-                  <div className="flex items-center justify-center space-x-3 mb-4">
-                    <Gift className="w-8 h-8 text-green-400" />
-                    <h2 className="text-3xl font-bold text-white">Refer and Earn</h2>
+                <div className="text-center mb-6 sm:mb-8">
+                  <div className="flex items-center justify-center space-x-2 sm:space-x-3 mb-3 sm:mb-4">
+                    <Gift className="w-6 h-6 sm:w-8 sm:h-8 text-green-400" />
+                    <h2 className="text-2xl sm:text-3xl font-bold text-white">Refer and Earn</h2>
                   </div>
-                  <p className="text-gray-400 max-w-lg mx-auto">
+                  <p className="text-gray-400 max-w-lg mx-auto text-sm sm:text-base">
                     Share your referral code with friends to earn points and climb the leaderboard together.
                   </p>
                 </div>
 
                 {/* Stats */}
-                <div className="space-y-4 mb-8">
+                <div className="space-y-4 mb-6 sm:mb-8">
                   {/* Global Rank */}
-                  <div className="p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
+                  <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                     <div className="flex items-center space-x-2 mb-1">
-                      <Star className="w-4 h-4 text-yellow-400" />
+                      <Star className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-400" />
                       <span className="text-xs text-yellow-400 font-medium">Global Rank</span>
                     </div>
-                    <p className="text-2xl font-bold text-white">#{userStats?.globalRank || 'N/A'}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-white">#{userStats?.globalRank || 'N/A'}</p>
                     <p className="text-xs text-gray-400">{userStats?.totalPoints || 0} Points</p>
                   </div>
                   {/* Referral and Points Stats */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                    <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                       <div className="flex items-center space-x-2 mb-1">
-                        <Users className="w-4 h-4 text-blue-400" />
+                        <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
                         <span className="text-xs text-blue-400 font-medium">Total Referrals</span>
                       </div>
-                      <p className="text-2xl font-bold text-white">{userStats?.totalReferrals || 0}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.totalReferrals || 0}</p>
                       <p className="text-xs text-gray-400">+{userStats?.bonusPoints || 0} bonus points</p>
                     </div>
-                    <div className="p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
+                    <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                       <div className="flex items-center space-x-2 mb-1">
-                        <TrendingUp className="w-4 h-4 text-green-400" />
+                        <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
                         <span className="text-xs text-green-400 font-medium">Total Points</span>
                       </div>
-                      <p className="text-2xl font-bold text-white">{userStats?.totalPoints || 0}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.totalPoints || 0}</p>
                       <p className="text-xs text-gray-400">From all activities</p>
                     </div>
-                    <div className="p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
+                    <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                       <div className="flex items-center space-x-2 mb-1">
-                        <ShieldCheck className="w-4 h-4 text-green-400" />
+                        <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
                         <span className="text-xs text-green-400 font-medium">Active Referrals</span>
                       </div>
-                      <p className="text-2xl font-bold text-white">{userStats?.bonusReferrals || 0}</p>
+                      <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.bonusReferrals || 0}</p>
                       <p className="text-xs text-gray-400">Earning points for you</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Your Referral Code Section */}
-                <div className="p-4 rounded-lg mb-6" style={{ backgroundColor: '#262626' }}>
+                <div className="p-3 sm:p-4 rounded-lg mb-4 sm:mb-6" style={{ backgroundColor: '#262626' }}>
                   <div className="flex items-center justify-between">
-                    <div>
+                    <div className="min-w-0 flex-1">
                       <h3 className="text-sm font-medium text-gray-400">Your Referral Code</h3>
-                      <p className="text-lg font-mono text-white mt-1">{referralCode}</p>
+                      <p className="text-base sm:text-lg font-mono text-white mt-1 truncate">{referralCode}</p>
                     </div>
                     <button
                       onClick={handleCopyReferral}
-                      className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 transition-colors duration-200"
+                      className="flex items-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 rounded-lg bg-green-600 hover:bg-green-700 transition-colors duration-200 ml-3"
                     >
                       {copiedReferral ? (
                         <>
-                          <Check className="w-4 h-4" />
-                          <span className="text-sm font-medium text-white">Copied!</span>
+                          <Check className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="text-xs sm:text-sm font-medium text-white hidden sm:inline">Copied!</span>
                         </>
                       ) : (
                         <>
-                          <Copy className="w-4 h-4" />
-                          <span className="text-sm font-medium text-white">Copy</span>
+                          <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
+                          <span className="text-xs sm:text-sm font-medium text-white hidden sm:inline">Copy</span>
                         </>
                       )}
                     </button>
@@ -402,28 +402,28 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
             {/* Right Column: Tasks */}
             <div className="lg:col-span-2 order-3 lg:order-3">
               <div className="rounded-2xl border border-gray-700/50 h-full" style={{ backgroundColor: '#171717' }}>
-                <div className="p-6 border-b border-gray-700/50">
-                  <div className="flex items-center space-x-3">
-                    <Target className="w-5 h-5 text-green-400" />
-                    <h2 className="text-xl font-bold text-white">Active Tasks</h2>
+                <div className="p-4 sm:p-6 border-b border-gray-700/50">
+                  <div className="flex items-center space-x-2 sm:space-x-3">
+                    <Target className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
+                    <h2 className="text-lg sm:text-xl font-bold text-white">Active Tasks</h2>
                   </div>
                 </div>
 
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {loading ? (
                     <div className="text-center py-8">
                       <div className="animate-spin w-6 h-6 border-2 border-t-transparent rounded-full mx-auto mb-4" style={{ borderColor: '#52D593', borderTopColor: 'transparent' }}></div>
                       <p className="text-gray-400 text-sm">Loading tasks...</p>
                     </div>
                   ) : bountyTasks.active.length > 0 ? (
-                    <div className="space-y-4">
+                    <div className="space-y-3 sm:space-y-4">
                       {bountyTasks.active.map((task) => (
                         <div
                           key={task.id}
-                          className="p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}
+                          className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}
                         >
                           <div className="flex items-start space-x-3">
-                            <div className="w-8 h-8 rounded-full bg-gray-800/50 flex items-center justify-center flex-shrink-0">
+                            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-800/50 flex items-center justify-center flex-shrink-0">
                               {getTaskIcon(task)}
                             </div>
                             
@@ -432,7 +432,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                               <p className="text-xs text-gray-400 mb-3">{task.description}</p>
                               
                               <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
+                                <div className="flex items-center space-x-2 sm:space-x-4">
                                   <span className="text-xs text-gray-400">
                                     {task.points} points
                                   </span>
@@ -444,7 +444,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                                 
                                 <button
                                   onClick={() => handleTaskAction(task.id, task.platform)}
-                                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200 ${
+                                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200 ${
                                     task.status === 'not_started'
                                       ? 'bg-green-600 hover:bg-green-700 text-white'
                                       : task.status === 'verifying'
@@ -464,8 +464,8 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                     </div>
                   ) : (
                     <div className="text-center py-8">
-                      <Target className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-lg font-semibold text-white mb-2">No Active Tasks</h3>
+                      <Target className="w-10 h-10 sm:w-12 sm:h-12 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-base sm:text-lg font-semibold text-white mb-2">No Active Tasks</h3>
                       <p className="text-gray-400 text-sm">
                         Complete more activities to unlock new tasks.
                       </p>
@@ -474,9 +474,9 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
 
                   {/* Completed Tasks Section */}
                   {bountyTasks.completed.length > 0 && (
-                    <div className="mt-8">
-                      <h3 className="text-lg font-semibold text-white mb-4 flex items-center space-x-2">
-                        <CheckCircle className="w-5 h-5 text-green-400" />
+                    <div className="mt-6 sm:mt-8">
+                      <h3 className="text-base sm:text-lg font-semibold text-white mb-4 flex items-center space-x-2">
+                        <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-green-400" />
                         <span>Completed Tasks</span>
                       </h3>
                       <div className="space-y-3">
@@ -486,11 +486,11 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                             className="p-3 rounded-lg border border-green-500/30 bg-green-500/5"
                           >
                             <div className="flex items-center space-x-3">
-                              <div className="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
-                                <CheckCircle className="w-4 h-4 text-green-400" />
+                              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
                               </div>
-                              <div className="flex-1">
-                                <h4 className="text-sm font-medium text-white">{task.title}</h4>
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-sm font-medium text-white truncate">{task.title}</h4>
                                 <p className="text-xs text-green-400">+{task.points} points earned</p>
                               </div>
                             </div>
