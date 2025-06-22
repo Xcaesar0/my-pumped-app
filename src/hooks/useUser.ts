@@ -173,15 +173,20 @@ export const useUser = () => {
           userAgent
         )
         
-        // Process the referral using the code directly
-        const result = await processReferralFromCode(pendingReferral, userId)
+        // Process the referral using the new function
+        const { data, error } = await supabase.rpc('process_referral_code_entry', {
+          referral_code_param: pendingReferral,
+          referee_id_param: userId
+        })
         
-        if (result.success) {
-          console.log('Referral processed successfully:', result)
+        if (error) {
+          console.warn('Referral processing failed:', error)
+        } else if (data?.success) {
+          console.log('Referral processed successfully:', data)
           // Refresh user data to show updated points
           await refreshUser()
         } else {
-          console.warn('Referral processing failed:', result.error)
+          console.warn('Referral processing failed:', data?.error)
         }
         
         // Clear the pending referral regardless of success/failure

@@ -1,6 +1,5 @@
 import React, { useState } from 'react'
 import { Hash, AlertCircle, CheckCircle, Gift } from 'lucide-react'
-import { User, processReferralFromCode, validateReferralCode } from '../lib/supabase'
 import { supabase } from '../lib/supabase'
 
 interface ReferralCodeInputProps {
@@ -26,20 +25,20 @@ const ReferralCodeInput: React.FC<ReferralCodeInputProps> = ({ userId, onSuccess
     setSuccess(null)
 
     try {
-      const { data, error: rpcError } = await supabase.rpc('process_referral_from_code', {
+      const { data, error: rpcError } = await supabase.rpc('process_referral_code_entry', {
         referral_code_param: referralCode.trim(),
-        new_user_id_param: userId
+        referee_id_param: userId
       })
 
       if (rpcError) {
         throw new Error(rpcError.message)
       }
 
-      if (data.success) {
+      if (data?.success) {
         setSuccess(data.message || 'Referral code applied successfully!')
         onSuccess()
       } else {
-        setError(data.error || 'Invalid or expired referral code.')
+        setError(data?.error || 'Invalid or expired referral code.')
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred.')
