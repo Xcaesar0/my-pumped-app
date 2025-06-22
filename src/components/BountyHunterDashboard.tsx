@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import { 
   Target, 
   Trophy, 
@@ -316,26 +316,26 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                     <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                       <div className="flex items-center space-x-2 mb-1">
                         <Users className="w-3 h-3 sm:w-4 sm:h-4 text-blue-400" />
-                        <span className="text-xs text-blue-400 font-medium">Referrals</span>
+                        <span className="text-xs text-blue-400 font-medium">Friends Invited</span>
                       </div>
                       <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.totalReferrals || 0}</p>
-                      <p className="text-xs text-gray-400">+{userStats?.pointsFromReferrals || 0} pts</p>
+                      <p className="text-xs text-gray-400">Total Referrals</p>
                     </div>
                     <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                       <div className="flex items-center space-x-2 mb-1">
                         <ShieldCheck className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
-                        <span className="text-xs text-green-400 font-medium">Social</span>
+                        <span className="text-xs text-green-400 font-medium">Valid Referrals</span>
                       </div>
-                      <p className="text-xl sm:text-2xl font-bold text-white">{referralStatus?.socialConnectionsCount || 0}/2</p>
-                      <p className="text-xs text-gray-400">+{userStats?.pointsFromSocial || 0} pts</p>
+                      <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.bonusReferrals || 0}</p>
+                      <p className="text-xs text-gray-400">Socials Linked</p>
                     </div>
                     <div className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}>
                       <div className="flex items-center space-x-2 mb-1">
                         <TrendingUp className="w-3 h-3 sm:w-4 sm:h-4 text-green-400" />
-                        <span className="text-xs text-green-400 font-medium">Chain</span>
+                        <span className="text-xs text-green-400 font-medium">All Activities</span>
                       </div>
                       <p className="text-xl sm:text-2xl font-bold text-white">{userStats?.pointsFromChain || 0}</p>
-                      <p className="text-xs text-gray-400">Bonus points</p>
+                      <p className="text-xs text-gray-400">All Activities</p>
                     </div>
                   </div>
                 </div>
