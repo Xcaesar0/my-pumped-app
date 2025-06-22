@@ -13,9 +13,4 @@ export default defineConfig({
       'Cross-Origin-Opener-Policy': 'unsafe-none',
     },
   },
-  build: {
-    rollupOptions: {
-      input: 'index.html'
-    }
-  }
 });
