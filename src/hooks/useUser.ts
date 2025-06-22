@@ -106,29 +106,35 @@ export const useUser = () => {
       // Set user state immediately to prevent UI flickering
       setUser(finalUser)
       setIsNewUser(userIsNew)
+      setLoading(false) // Set loading to false immediately after setting user
       
-      // Process any pending referral in the background
+      // Process any pending referral in the background (non-blocking)
       if (userIsNew || !finalUser.current_points) {
-        processReferralIfPending(finalUser.id)
+        // Use setTimeout to make this truly async and non-blocking
+        setTimeout(() => {
+          processReferralIfPending(finalUser.id)
+        }, 100)
       }
       
       // Only show referral modal for new users who don't have a pending referral and haven't used a code
       if (userIsNew) {
-        const hasExistingReferral = await checkExistingReferral(finalUser.id)
-        const pendingReferral = referralCode
-        
-        if (!pendingReferral && !hasExistingReferral) {
-          // Delay showing modal slightly to ensure smooth transition
-          setTimeout(() => {
-            setShowReferralModal(true)
-          }, 500)
-        }
+        // Check for existing referral in background
+        setTimeout(async () => {
+          const hasExistingReferral = await checkExistingReferral(finalUser.id)
+          const pendingReferral = referralCode
+          
+          if (!pendingReferral && !hasExistingReferral) {
+            // Delay showing modal slightly to ensure smooth transition
+            setTimeout(() => {
+              setShowReferralModal(true)
+            }, 1000) // Increased delay for smoother UX
+          }
+        }, 200)
       }
 
     } catch (err) {
       console.error('Error handling wallet connection:', err)
       setError(err instanceof Error ? err.message : 'Failed to connect user')
-    } finally {
       setLoading(false)
     }
   }
