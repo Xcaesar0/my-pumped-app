@@ -147,8 +147,11 @@ const PixelTransition: React.FC<PixelTransitionProps> = ({
 
       <div
         ref={activeRef}
-        className="absolute inset-0 w-full h-full z-[2]"
-        style={{ display: "none" }}
+        className="absolute inset-0 w-full h-full z-[2] overflow-hidden"
+        style={{ 
+          display: "none",
+          borderRadius: "inherit" // This ensures the second content inherits the border radius
+        }}
       >
         {secondContent}
       </div>
@@ -156,6 +159,7 @@ const PixelTransition: React.FC<PixelTransitionProps> = ({
       <div
         ref={pixelGridRef}
         className="absolute inset-0 w-full h-full pointer-events-none z-[3]"
+        style={{ borderRadius: "inherit" }} // This ensures pixels respect the border radius too
       />
     </div>
   );
