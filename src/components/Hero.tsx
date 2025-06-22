@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useWeb3Modal } from '@web3modal/wagmi/react'
 import { useAccount } from 'wagmi'
 import { useUser } from '../hooks/useUser'
@@ -14,6 +14,7 @@ import { useReferralInfo } from '../hooks/useReferralInfo'
 
 const Hero = () => {
   const [hoveredButton, setHoveredButton] = useState<string | null>(null)
+  const [isTransitioning, setIsTransitioning] = useState(false)
   const { open } = useWeb3Modal()
   const { isConnected } = useAccount()
   const { 
@@ -25,6 +26,18 @@ const Hero = () => {
     handleReferralSuccess 
   } = useUser()
   const { referralCode, referrerUsername, isLoadingReferrer } = useReferralInfo()
+
+  // Chrome-specific fix: Add a small delay before showing connected state
+  useEffect(() => {
+    if (isConnected && user && !isTransitioning) {
+      setIsTransitioning(true)
+      // Small delay to ensure smooth transition in Chrome
+      const timer = setTimeout(() => {
+        setIsTransitioning(false)
+      }, 100)
+      return () => clearTimeout(timer)
+    }
+  }, [isConnected, user])
 
   const handleYesClick = () => {
     open()
@@ -42,7 +55,7 @@ const Hero = () => {
   }
 
   // Show loading only when actually loading, not when just connected
-  if (loading && !user) {
+  if (loading || isTransitioning) {
     return (
       <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 sm:px-6" style={{ backgroundColor: '#1A1A1A' }}>
         <div className="text-center">
@@ -55,8 +68,8 @@ const Hero = () => {
     )
   }
 
-  // Show connected hero immediately when user exists
-  if (isConnected && user) {
+  // Show connected hero immediately when user exists and not transitioning
+  if (isConnected && user && !isTransitioning) {
     return (
       <>
         <ConnectedHero user={user} />

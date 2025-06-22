@@ -14,9 +14,14 @@ export const useReferralInfo = () => {
             const code = path.split('/ref/')[1];
             if (code) {
                 sessionStorage.setItem(REFERRAL_CODE_KEY, code);
-                // Clean up URL without causing navigation
-                const newUrl = window.location.pathname.split('/ref/')[0] || '/';
-                window.history.replaceState({}, document.title, newUrl);
+                // Clean up URL without causing navigation - Chrome-safe approach
+                try {
+                    const newUrl = window.location.pathname.split('/ref/')[0] || '/';
+                    window.history.replaceState({}, document.title, newUrl);
+                } catch (e) {
+                    // Fallback for Chrome if history API fails
+                    console.warn('Could not update URL:', e);
+                }
             }
         }
         
@@ -34,6 +39,9 @@ export const useReferralInfo = () => {
         const fetchReferrer = async () => {
             setIsLoading(true);
             try {
+                // Add a small delay for Chrome compatibility
+                await new Promise(resolve => setTimeout(resolve, 50));
+                
                 const { data, error } = await supabase
                     .from('users')
                     .select('username')
@@ -54,13 +62,21 @@ export const useReferralInfo = () => {
             }
         };
 
-        fetchReferrer();
+        // Use requestAnimationFrame for Chrome compatibility
+        requestAnimationFrame(() => {
+            fetchReferrer();
+        });
     }, [referralCode]);
     
     const clearReferralInfo = () => {
-        sessionStorage.removeItem(REFERRAL_CODE_KEY);
-        setReferralCode(null);
-        setReferrerUsername(null);
+        try {
+            sessionStorage.removeItem(REFERRAL_CODE_KEY);
+            setReferralCode(null);
+            setReferrerUsername(null);
+        } catch (e) {
+            // Fallback for Chrome if sessionStorage fails
+            console.warn('Could not clear referral info:', e);
+        }
     };
 
     return { 

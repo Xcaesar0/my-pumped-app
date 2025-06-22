@@ -107,9 +107,12 @@ export const useUser = () => {
       setUser(finalUser)
       setIsNewUser(userIsNew)
       
-      // Process any pending referral in the background
+      // Process any pending referral in the background (non-blocking)
       if (userIsNew || !finalUser.current_points) {
-        processReferralIfPending(finalUser.id)
+        // Use setTimeout to make this truly non-blocking for Chrome
+        setTimeout(() => {
+          processReferralIfPending(finalUser.id)
+        }, 0)
       }
       
       // Only show referral modal for new users who don't have a pending referral and haven't used a code
