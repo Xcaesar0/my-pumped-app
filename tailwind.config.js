@@ -5,6 +5,9 @@ export default {
     extend: {
       fontSize: {
         '10xl': '10rem',
+      },
+      screens: {
+        'xs': '475px',
       }
     },
   },

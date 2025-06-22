@@ -105,29 +105,19 @@ const Hero = () => {
         <div className="mb-6 sm:mb-8 md:mb-12">
           {/* First line - "Are You Ready To Go.." */}
           <div className="px-1 flex justify-center mb-2 sm:mb-4">
-            <FuzzyText
-              fontSize="clamp(2.5rem, 12vw, 5.5rem)"
-              fontWeight={400}
-              color="#ffffff"
-              enableHover={true}
-              baseIntensity={0.15}
-              hoverIntensity={0.4}
-            >
-              Are You Ready To Go..
-            </FuzzyText>
+            <div className="text-center">
+              <h1 className="text-3xl xs:text-4xl sm:text-5xl md:text-6xl lg:text-7xl xl:text-8xl font-normal text-white leading-tight tracking-wide">
+                Are You Ready To Go..
+              </h1>
+            </div>
           </div>
           {/* Second line - "Beyond The Pump?" */}
           <div className="px-1 flex justify-center">
-            <FuzzyText
-              fontSize="clamp(4rem, 18vw, 9rem)"
-              fontWeight={700}
-              color="#ffffff"
-              enableHover={true}
-              baseIntensity={0.15}
-              hoverIntensity={0.4}
-            >
-              Beyond The Pump?
-            </FuzzyText>
+            <div className="text-center">
+              <h2 className="text-4xl xs:text-5xl sm:text-6xl md:text-7xl lg:text-8xl xl:text-9xl font-bold text-white leading-tight tracking-wide">
+                Beyond The Pump?
+              </h2>
+            </div>
           </div>
         </div>
 
