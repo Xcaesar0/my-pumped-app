@@ -7,7 +7,6 @@ import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
 import XIcon from './icons/XIcon'
 import { supabase } from '../lib/supabase'
-import { useAuth0 } from '@auth0/auth0-react'
 
 interface ProfileSettingsModalProps {
   user: User
@@ -22,7 +21,6 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   } = useSocialConnections(user.id)
   
   const { disconnect } = useDisconnect()
-  const { loginWithRedirect } = useAuth0()
   
   const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
 
@@ -42,11 +40,8 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleConnectX = async () => {
-    await loginWithRedirect({
-      authorizationParams: {
-        connection: 'twitter',
-      }
-    })
+    // Placeholder for X account connection logic
+    alert('X account linking is not currently implemented.');
   }
 
   return (

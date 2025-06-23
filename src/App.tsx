@@ -8,7 +8,6 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ReferralPageWrapper from './components/ReferralPageWrapper';
-import Auth0Linker from './components/Auth0Linker';
 
 // Get projectId from environment variables
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
@@ -41,7 +40,6 @@ function AppContent() {
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden" style={{ backgroundColor: '#1A1A1A' }}>
-      <Auth0Linker />
       <Header />
       <Hero />
     </div>
@@ -56,7 +54,6 @@ function App() {
           <Routes>
             <Route path="/" element={<AppContent />} />
             <Route path="/referral/:referralCode" element={<ReferralPageWrapper />} />
-            <Route path="/callback" element={<Auth0Linker />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>
