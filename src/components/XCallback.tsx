@@ -65,7 +65,7 @@ export default function XCallback() {
             platform_username: twitterUsername,
             user_data: twitterIdentity,
             is_active: true
-          })
+          }, { onConflict: 'user_id,platform' })
         if (dbError) {
           setError('Failed to save connection: ' + dbError.message)
           setStatus('error')
