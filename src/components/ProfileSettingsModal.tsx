@@ -41,7 +41,6 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
 
   const handleConnectX = async () => {
     try {
-      console.log('Initiating X connection...');
       // Call the Edge Function to get the authorization URL
       const { data, error } = await supabase.functions.invoke('x-oauth', {
         body: {
@@ -49,29 +48,17 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
         }
       })
 
-      console.log('Edge function response:', { data, error });
-
       if (error) {
         console.error('Error getting X auth URL:', error)
-        alert(`Error getting X auth URL: ${error.message}`);
         return
       }
 
       if (data?.auth_url) {
-        console.log('Redirecting to X auth URL:', data.auth_url);
         // Redirect to X authorization page
         window.location.href = data.auth_url
-      } else {
-        console.error('No auth_url received from edge function. Data:', data);
-        alert('Could not get authorization URL from server. Please check the console for details.');
       }
     } catch (err) {
       console.error('Error initiating X connection:', err)
-      if (err instanceof Error) {
-        alert(`An unexpected error occurred: ${err.message}`);
-      } else {
-        alert('An unexpected error occurred.');
-      }
     }
   }
 
