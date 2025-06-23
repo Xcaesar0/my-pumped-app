@@ -33,33 +33,38 @@ export default function XCallback() {
           return
         }
         // Ensure user exists in custom users table
-        const { data: existingUser } = await supabase
+        let userIdToUse = session.user.id;
+        // Try to find existing user by wallet_address
+        const { data: userByWallet } = await supabase
           .from('users')
           .select('id')
-          .eq('id', session.user.id)
-          .single()
-        if (!existingUser) {
-          // Upsert user into your custom users table with wallet_address as conflict target
-          const { error: upsertUserError } = await supabase.from('users').upsert({
+          .eq('wallet_address', '') // Replace '' with the actual wallet address if available
+          .single();
+
+        if (userByWallet) {
+          userIdToUse = userByWallet.id;
+        } else {
+          // Insert new user
+          const { error: insertError } = await supabase.from('users').insert({
             id: session.user.id,
-            username: session.user.email || 'XUser', // or another default
+            username: session.user.email || 'XUser',
             is_active: true,
             points: 0,
             wallet_address: '', // Always provide a value for wallet_address
-            // add other required fields with defaults if needed
-          }, { onConflict: 'wallet_address' })
-          if (upsertUserError) {
-            setError('Failed to create user: ' + upsertUserError.message)
-            setStatus('error')
-            return
+            // ...other fields
+          });
+          if (insertError) {
+            setError('Failed to create user: ' + insertError.message);
+            setStatus('error');
+            return;
           }
         }
-        // Upsert into social_connections table
+        // Upsert into social_connections table using userIdToUse
         const twitterUsername = twitterIdentity.identity_data?.screen_name || twitterIdentity.identity_data?.username || ''
         const { error: dbError, data: upsertData } = await supabase
           .from('social_connections')
           .upsert({
-            user_id: session.user.id,
+            user_id: userIdToUse,
             platform: 'x',
             platform_user_id: twitterIdentity.id,
             platform_username: twitterUsername,
