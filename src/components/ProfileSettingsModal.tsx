@@ -24,6 +24,8 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const { disconnect } = useDisconnect()
   
   const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
+  const [disconnectingPlatform, setDisconnectingPlatform] = useState<'telegram' | 'x' | null>(null)
+  const [connectingX, setConnectingX] = useState(false)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -40,12 +42,20 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const handleDisconnectSocial = async (platform: 'telegram' | 'x') => {
     const connection = getConnectionByPlatform(platform)
     if (connection) {
-      await removeConnection(connection.id)
+      try {
+        setDisconnectingPlatform(platform)
+        await removeConnection(connection.id)
+      } catch (err) {
+        console.error(`Error disconnecting ${platform}:`, err)
+      } finally {
+        setDisconnectingPlatform(null)
+      }
     }
   }
 
   const handleConnectX = async () => {
     try {
+      setConnectingX(true)
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
@@ -58,6 +68,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
     } catch (err) {
       console.error('Error initiating X connection:', err)
     }
+    // Don't set connectingX to false here as we're redirecting away
   }
 
   return (
@@ -95,7 +106,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <TelegramIcon className="w-5 h-5 text-blue-400" />
                   <span className="text-sm font-medium text-white">Telegram</span>
                 </div>
-                {connectionsLoading ? (
+                {connectionsLoading || disconnectingPlatform === 'telegram' ? (
                   <span className="text-xs text-gray-400">Loading...</span>
                 ) : telegramConnection ? (
                   <button
@@ -123,7 +134,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <XIcon className="w-5 h-5 text-white" />
                   <span className="text-sm font-medium text-white">X (Twitter)</span>
                 </div>
-                {connectionsLoading ? (
+                {connectionsLoading || disconnectingPlatform === 'x' || connectingX ? (
                   <span className="text-xs text-gray-400">Loading...</span>
                 ) : xConnection ? (
                   <div className="flex items-center space-x-2">
