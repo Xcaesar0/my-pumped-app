@@ -8,7 +8,6 @@ import Header from './components/Header';
 import Hero from './components/Hero';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import ReferralPageWrapper from './components/ReferralPageWrapper';
-import XCallback from './components/XCallback';
 
 // Get projectId from environment variables
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
@@ -53,9 +52,8 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Routes>
-            <Route path="/ref/:referralCode" element={<ReferralPageWrapper />} />
-            <Route path="/callback" element={<XCallback />} />
-            <Route path="*" element={<AppContent />} />
+            <Route path="/" element={<AppContent />} />
+            <Route path="/referral/:referralCode" element={<ReferralPageWrapper />} />
           </Routes>
         </BrowserRouter>
       </QueryClientProvider>

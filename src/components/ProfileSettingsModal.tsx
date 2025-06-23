@@ -40,26 +40,9 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleConnectX = async () => {
-    try {
-      // Call the Edge Function to get the authorization URL
-      const { data, error } = await supabase.functions.invoke('x-oauth', {
-        body: {
-          action: 'get_auth_url'
-        }
-      })
-
-      if (error) {
-        console.error('Error getting X auth URL:', error)
-        return
-      }
-
-      if (data?.auth_url) {
-        // Redirect to X authorization page
-        window.location.href = data.auth_url
-      }
-    } catch (err) {
-      console.error('Error initiating X connection:', err)
-    }
+    // TODO: Implement Auth0 login flow
+    console.log("Connect X button clicked - to be replaced with Auth0");
+    alert("This will be replaced with the new Auth0 login flow.");
   }
 
   return (
