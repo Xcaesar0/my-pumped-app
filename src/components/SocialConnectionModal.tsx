@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { X, CheckCircle, AlertCircle } from 'lucide-react'
-import { User, SocialConnection } from '../lib/supabase'
-import { useSocialConnections } from '../hooks/useSocialConnections'
+import { User, SocialConnection, supabase } from '../lib/supabase'
+import { useUser } from '../hooks/useUser'
 import { verifyTelegramAuth } from '../services/socialAuth'
 import TelegramIcon from './icons/TelegramIcon'
 
@@ -29,18 +29,17 @@ declare global {
 
 const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, platform, onClose }) => {
   const { 
-    addConnection, 
-    removeConnection, 
-    getConnectionByPlatform,
+    connections,
     loading: connectionsLoading,
-  } = useSocialConnections(user.id)
+    refreshUser
+  } = useUser()
   
   const [authStatus, setAuthStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   
   const scriptRef = useRef<HTMLScriptElement | null>(null)
-  const connection = getConnectionByPlatform(platform)
+  const connection = connections.find(c => c.platform === platform)
 
   const platformConfig = {
     telegram: {
@@ -133,8 +132,11 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
 
       console.log('Connection data:', connectionData)
 
-      const newConnection = await addConnection(connectionData)
-      console.log('Connection created successfully:', newConnection)
+      const newConnection = await supabase.from('social_connections').insert(connectionData).select().single();
+      if (newConnection.error) throw newConnection.error;
+
+      console.log('Connection created successfully:', newConnection.data)
+      await refreshUser();
       
       setAuthStatus('success')
       
@@ -177,7 +179,8 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
   const handleDisconnect = async () => {
     if (connection) {
       try {
-        await removeConnection(connection.id)
+        await supabase.from('social_connections').delete().eq('id', connection.id)
+        await refreshUser();
         onClose()
       } catch (err) {
         console.error('Error disconnecting:', err)
