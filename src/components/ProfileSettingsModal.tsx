@@ -5,8 +5,8 @@ import { useSocialConnections } from '../hooks/useSocialConnections'
 import { useDisconnect } from 'wagmi'
 import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
-import { supabase } from '../lib/supabase'
 import XIcon from './icons/XIcon'
+import { supabase } from '../lib/supabase'
 
 interface ProfileSettingsModalProps {
   user: User
@@ -22,9 +22,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   
   const { disconnect } = useDisconnect()
   
-  const [socialModal, setSocialModal] = useState<'telegram' | null>(null)
-  const [xLoading, setXLoading] = useState(false)
-  const [xError, setXError] = useState<string | null>(null)
+  const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -34,28 +32,33 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
     onClose()
   }
 
-  const handleDisconnectSocial = async () => {
-    const connection = getConnectionByPlatform('telegram')
+  const handleDisconnectSocial = async (platform: 'telegram' | 'x') => {
+    const connection = getConnectionByPlatform(platform)
     if (connection) {
       await removeConnection(connection.id)
     }
   }
 
   const handleConnectX = async () => {
-    setXLoading(true)
-    setXError(null)
     try {
-      // Call Edge Function to get the X OAuth URL
-      const res = await fetch('/functions/v1/x-oauth2/start', { method: 'GET', credentials: 'include' })
-      if (res.redirected) {
-        window.location.href = res.url
+      // Call the Edge Function to get the authorization URL
+      const { data, error } = await supabase.functions.invoke('x-oauth', {
+        body: {
+          action: 'get_auth_url'
+        }
+      })
+
+      if (error) {
+        console.error('Error getting X auth URL:', error)
         return
       }
-      setXError('Failed to start X OAuth flow')
+
+      if (data?.auth_url) {
+        // Redirect to X authorization page
+        window.location.href = data.auth_url
+      }
     } catch (err) {
-      setXError('Failed to start X OAuth flow')
-    } finally {
-      setXLoading(false)
+      console.error('Error initiating X connection:', err)
     }
   }
 
@@ -98,7 +101,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <span className="text-xs text-gray-400">Loading...</span>
                 ) : telegramConnection ? (
                   <button
-                    onClick={handleDisconnectSocial}
+                    onClick={() => handleDisconnectSocial('telegram')}
                     className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
                   >
                     <Unlink className="w-3 h-3" />
@@ -113,6 +116,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   </button>
                 )}
               </div>
+              
               <div
                 className="w-full flex items-center justify-between p-4 rounded-lg"
                 style={{ backgroundColor: '#262626' }}
@@ -124,26 +128,22 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                 {connectionsLoading ? (
                   <span className="text-xs text-gray-400">Loading...</span>
                 ) : xConnection ? (
-                  <div className="flex items-center space-x-2">
-                    {xConnection.provider_metadata?.x_avatar_url && (
-                      <img src={xConnection.provider_metadata.x_avatar_url} alt="X Avatar" className="w-6 h-6 rounded-full" />
-                    )}
-                    <span className="text-xs text-white font-medium">@{xConnection.provider_metadata?.x_username}</span>
-                  </div>
+                  <button
+                    onClick={() => handleDisconnectSocial('x')}
+                    className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
+                  >
+                    <Unlink className="w-3 h-3" />
+                    <span>Disconnect</span>
+                  </button>
                 ) : (
                   <button
                     onClick={handleConnectX}
-                    disabled={xLoading}
-                    className="px-3 py-1 text-xs font-medium bg-black text-white rounded-md border border-gray-700 hover:bg-gray-900 flex items-center space-x-2"
+                    className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
                   >
-                    <XIcon className="w-4 h-4 mr-1" />
-                    <span>{xLoading ? 'Connecting...' : 'Connect'}</span>
+                    Connect
                   </button>
                 )}
               </div>
-              {xError && (
-                <div className="text-xs text-red-500 mt-1 flex items-center"><AlertCircle className="w-3 h-3 mr-1" />{xError}</div>
-              )}
             </div>
           </div>
 

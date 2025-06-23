@@ -1,13 +1,15 @@
 import React from 'react';
 
-const XIcon = ({ className = '' }: { className?: string }) => (
-  <svg
-    xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="currentColor"
+const XIcon = ({ className }: { className?: string }) => (
+  <svg 
+    xmlns="http://www.w3.org/2000/svg" 
+    viewBox="0 0 24 24" 
+    fill="currentColor" 
     className={className}
+    width="16" 
+    height="16"
   >
-    <path d="M17.53 2.47a.75.75 0 0 1 1.06 1.06L13.06 9l6.47 6.47a.75.75 0 1 1-1.06 1.06L12 10.06l-6.47 6.47a.75.75 0 1 1-1.06-1.06L10.94 9 4.47 2.53A.75.75 0 1 1 5.53 1.47L12 7.94l6.47-6.47a.75.75 0 0 1 1.06 1.06z" />
+    <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.847h-7.406l-5.8-7.584-6.638 7.584H.474l8.6-9.83L0 1.154h7.594l5.243 7.184L18.901 1.153zm-1.61 19.893h2.23l-10.45-12.03-2.03.01-11.08 12.02h2.23l5.08-5.505 6.02 5.505z"/>
   </svg>
 );
 

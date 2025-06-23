@@ -1,9 +1,10 @@
 import React from 'react'
 import { X } from 'lucide-react'
 import TelegramIcon from './icons/TelegramIcon'
+import XIcon from './icons/XIcon'
 
 interface SocialConnectionRequiredModalProps {
-  platform: 'telegram'
+  platform: 'telegram' | 'x'
   onClose: () => void
   onConnect: () => void
 }
@@ -19,6 +20,12 @@ const SocialConnectionRequiredModal: React.FC<SocialConnectionRequiredModalProps
       icon: <TelegramIcon className="w-8 h-8 text-blue-400" />,
       description: 'To complete this task, you need to connect your Telegram account.',
       buttonColor: 'bg-blue-600 hover:bg-blue-700',
+    },
+    x: {
+      name: 'X (Twitter)',
+      icon: <XIcon className="w-8 h-8 text-white" />,
+      description: 'To complete this task, you need to connect your X account.',
+      buttonColor: 'bg-gray-800 hover:bg-gray-900',
     },
   }
 

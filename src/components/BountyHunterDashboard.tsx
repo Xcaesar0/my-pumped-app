@@ -44,6 +44,7 @@ import SocialConnectionRequiredModal from './SocialConnectionRequiredModal'
 import UserProfile from './UserProfile'
 import ReferralCodeInput from './ReferralCodeInput'
 import TelegramIcon from './icons/TelegramIcon'
+import XIcon from './icons/XIcon'
 import ProfileSettingsModal from './ProfileSettingsModal'
 
 interface BountyHunterDashboardProps {
@@ -52,7 +53,7 @@ interface BountyHunterDashboardProps {
 
 const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) => {
   const [showProfileModal, setShowProfileModal] = useState(false)
-  const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | null>(null)
+  const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | 'x' | null>(null)
   const [copiedReferral, setCopiedReferral] = useState(false)
   const [taskCompletionMessage, setTaskCompletionMessage] = useState<string | null>(null)
 
@@ -86,11 +87,22 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     }
   }
 
-  const handleTaskAction = async (taskId: string, platform?: 'telegram' | 'general') => {
+  const handleTaskAction = async (taskId: string, platform?: 'telegram' | 'x' | 'general') => {
     const task = bountyTasks.active.find(t => t.id === taskId)
     
     // Check if user has the required connection for this task
     if (task?.requires_connection && platform === 'telegram') {
+      const connection = getConnectionByPlatform(platform)
+      
+      // If no connection exists, show the connection required modal
+      if (!connection || !connection.is_active) {
+        setShowConnectionModal(platform)
+        return
+      }
+    }
+
+    // Check if user has the required connection for X tasks
+    if (task?.requires_connection && platform === 'x') {
       const connection = getConnectionByPlatform(platform)
       
       // If no connection exists, show the connection required modal
@@ -114,7 +126,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     }
   }
 
-  const handleConnectSocial = (platform: 'telegram' | 'general') => {
+  const handleConnectSocial = (platform: 'telegram' | 'x') => {
     setShowConnectionModal(null)
     setShowProfileModal(true)
   }
@@ -155,6 +167,8 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     switch (task.platform) {
       case 'telegram':
         return <TelegramIcon className="w-4 h-4 text-blue-400" />
+      case 'x':
+        return <XIcon className="w-4 h-4 text-white" />
       default:
         return <HelpCircle className="w-4 h-4 text-gray-400" />
     }
@@ -407,6 +421,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                                   </span>
                                   <span className="text-xs text-gray-400">
                                     {task.platform === 'telegram' && 'Telegram'}
+                                    {task.platform === 'x' && 'X (Twitter)'}
                                   </span>
                                 </div>
                                 
