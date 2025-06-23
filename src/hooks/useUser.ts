@@ -49,10 +49,26 @@ export const useUser = () => {
         
         setConnections(connectionsData || [])
       } else {
-        setIsNewUser(true)
-        setShowReferralModal(true)
-        setUser(null)
-        setConnections([])
+        // Create new user
+        const username = generateUsername();
+        const { data: newUser, error: createError } = await supabase
+          .from('users')
+          .insert({ 
+            wallet_address: address, 
+            username,
+            current_points: 0,
+            current_rank: 0,
+            connection_timestamp: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        if (createError) throw createError;
+
+        setUser(newUser);
+        setIsNewUser(true);
+        setShowReferralModal(true);
+        setConnections([]);
       }
 
     } catch (error: any) {
