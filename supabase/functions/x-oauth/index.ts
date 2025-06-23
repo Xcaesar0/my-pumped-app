@@ -22,24 +22,9 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
     // Get X API credentials from environment
-    const xApiKey = Deno.env.get('X_API_KEY')
-    const xApiSecret = Deno.env.get('X_API_SECRET')
-
-    // --- START DEBUG LOGS ---
-    console.log("--- Edge Function Secrets Debug ---");
-    console.log("Is X_API_KEY present?", !!xApiKey);
-    console.log("Is X_API_SECRET present?", !!xApiSecret);
-    if (xApiKey) {
-      console.log("X_API_KEY Length:", xApiKey.length);
-      console.log("X_API_KEY Partial:", `${xApiKey.substring(0, 3)}...${xApiKey.slice(-3)}`);
-    }
-    if (xApiSecret) {
-      console.log("X_API_SECRET Length:", xApiSecret.length);
-      console.log("X_API_SECRET Partial:", `${xApiSecret.substring(0, 3)}...${xApiSecret.slice(-3)}`);
-    }
-    console.log("---------------------------------");
-    
-    const callbackUrl = Deno.env.get('X_CALLBACK_URL') || 'https://pumped.fun/callback'
+    const xApiKey = Deno.env.get('X_API_KEY');
+    const xApiSecret = Deno.env.get('X_API_SECRET');
+    const callbackUrl = Deno.env.get('X_CALLBACK_URL') || 'https://pumped.fun/callback';
     
     if (action === 'get_auth_url') {
       // Step 1: Get request token
