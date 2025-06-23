@@ -41,22 +41,32 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
 
   const handleConnectX = async () => {
     try {
+      // Get the current Supabase session
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        alert('You must be logged in to link your X account.');
+        return;
+      }
       const response = await fetch(
         `${import.meta.env.VITE_SUPABASE_FUNCTION_URL || '/functions/v1/x-oauth'}`,
         {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
         }
-      )
-      const data = await response.json()
+      );
+      const data = await response.json();
       if (data.authUrl) {
-        window.location.href = data.authUrl
+        window.location.href = data.authUrl;
       } else {
-        alert('Failed to get X authorization URL.')
+        alert('Failed to get X authorization URL.');
       }
     } catch (err) {
-      alert('Error starting X OAuth flow.')
-      console.error(err)
+      alert('Error starting X OAuth flow.');
+      console.error(err);
     }
   }
 
