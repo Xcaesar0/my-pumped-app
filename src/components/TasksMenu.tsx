@@ -1,14 +1,13 @@
 import React from 'react';
 import { Target, Gift, HelpCircle } from 'lucide-react';
 import TelegramIcon from './icons/TelegramIcon';
-import XIcon from './icons/XIcon';
 
 interface Task {
   id: string;
   title: string;
   description: string;
   points: number;
-  type: 'telegram' | 'x' | 'other';
+  type: 'telegram' | 'other';
   link: string;
 }
 
@@ -23,29 +22,19 @@ const TasksMenu: React.FC = () => {
       link: 'https://t.me/pumpeddotfun'
     },
     {
-      id: 'follow_x',
-      title: 'Follow @pumpeddotfun',
-      description: 'Follow @pumpeddotfun on X (Twitter)',
-      points: 50,
-      type: 'x',
-      link: 'https://x.com/pumpeddotfun'
-    },
-    {
       id: 'repost_launch',
       title: 'Repost Launch Post',
       description: 'Repost our latest launch announcement',
       points: 75,
-      type: 'x',
+      type: 'other',
       link: 'https://x.com/pumpeddotfun/status/123456789'
     }
   ];
 
-  const getTaskIcon = (type: 'telegram' | 'x' | 'other') => {
+  const getTaskIcon = (type: 'telegram' | 'other') => {
     switch (type) {
       case 'telegram':
         return <TelegramIcon className="w-5 h-5 text-blue-400" />;
-      case 'x':
-        return <XIcon className="w-5 h-5 text-white" />;
       default:
         return <HelpCircle className="w-5 h-5 text-gray-400" />;
     }
@@ -84,7 +73,6 @@ const TasksMenu: React.FC = () => {
                       {getTaskIcon(task.type)}
                       <span className="text-xs">
                         {task.type === 'telegram' && 'Telegram'}
-                        {task.type === 'x' && 'X (Twitter)'}
                         {task.type === 'other' && 'Task'}
                       </span>
                     </div>

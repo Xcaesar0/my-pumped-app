@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
 import { supabase, User, processReferralFromCode, trackReferralClick } from '../lib/supabase'
 import { generateUsername } from '../utils/username'
@@ -214,7 +214,8 @@ export const useUser = () => {
     }
   }
 
-  const refreshUser = useCallback(async () => {
+  // Force refresh user data
+  const refreshUser = async () => {
     if (!address) return
     
     try {
@@ -229,24 +230,17 @@ export const useUser = () => {
       }
     } catch (error) {
       console.error('Error refreshing user:', error)
-    } finally {
-      setLoading(false)
     }
-  }, [address])
-
-  const refreshSocialConnections = async () => {
-    // This is a placeholder. A more robust implementation might involve
-    // re-fetching social connection data from a dedicated hook or service.
-    // For now, refreshing the user should be sufficient if social data is part of the user object.
-    await refreshUser();
-  };
+  }
 
   const handleReferralModalClose = () => {
     setShowReferralModal(false)
   }
 
   const handleReferralSuccess = () => {
+    // Refresh user data to get updated points
     refreshUser()
+    setShowReferralModal(false)
   }
 
   return {
@@ -256,7 +250,6 @@ export const useUser = () => {
     isConnected: isConnected && !!user,
     isNewUser,
     refreshUser,
-    refreshSocialConnections,
     showReferralModal: showReferralModal && isNewUser, // Only show for new users
     handleReferralModalClose,
     handleReferralSuccess

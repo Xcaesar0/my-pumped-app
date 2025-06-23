@@ -5,7 +5,6 @@ import { useSocialConnections } from '../hooks/useSocialConnections'
 import { useDisconnect } from 'wagmi'
 import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
-import XIcon from './icons/XIcon'
 import { supabase } from '../lib/supabase'
 
 interface ProfileSettingsModalProps {
@@ -22,51 +21,19 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   
   const { disconnect } = useDisconnect()
   
-  const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
+  const [socialModal, setSocialModal] = useState<'telegram' | null>(null)
 
   const telegramConnection = getConnectionByPlatform('telegram')
-  const xConnection = getConnectionByPlatform('x')
 
   const handleDisconnectWallet = () => {
     disconnect()
     onClose()
   }
 
-  const handleDisconnectSocial = async (platform: 'telegram' | 'x') => {
-    const connection = getConnectionByPlatform(platform)
+  const handleDisconnectSocial = async () => {
+    const connection = getConnectionByPlatform('telegram')
     if (connection) {
       await removeConnection(connection.id)
-    }
-  }
-
-  const handleConnectX = async () => {
-    try {
-      // Get the current Supabase session
-      const { data: { session } } = await supabase.auth.getSession();
-      const accessToken = session?.access_token;
-      if (!accessToken) {
-        alert('You must be logged in to link your X account.');
-        return;
-      }
-      const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_FUNCTION_URL || '/functions/v1/x-oauth'}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-        }
-      );
-      const data = await response.json();
-      if (data.authUrl) {
-        window.location.href = data.authUrl;
-      } else {
-        alert('Failed to get X authorization URL.');
-      }
-    } catch (err) {
-      alert('Error starting X OAuth flow.');
-      console.error(err);
     }
   }
 
@@ -109,7 +76,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <span className="text-xs text-gray-400">Loading...</span>
                 ) : telegramConnection ? (
                   <button
-                    onClick={() => handleDisconnectSocial('telegram')}
+                    onClick={handleDisconnectSocial}
                     className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
                   >
                     <Unlink className="w-3 h-3" />
@@ -118,34 +85,6 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                 ) : (
                   <button
                     onClick={() => setSocialModal('telegram')}
-                    className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
-                  >
-                    Connect
-                  </button>
-                )}
-              </div>
-              
-              <div
-                className="w-full flex items-center justify-between p-4 rounded-lg"
-                style={{ backgroundColor: '#262626' }}
-              >
-                <div className="flex items-center space-x-3">
-                  <XIcon className="w-5 h-5 text-white" />
-                  <span className="text-sm font-medium text-white">X (Twitter)</span>
-                </div>
-                {connectionsLoading ? (
-                  <span className="text-xs text-gray-400">Loading...</span>
-                ) : xConnection ? (
-                  <button
-                    onClick={() => handleDisconnectSocial('x')}
-                    className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    <Unlink className="w-3 h-3" />
-                    <span>Disconnect</span>
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleConnectX}
                     className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
                   >
                     Connect

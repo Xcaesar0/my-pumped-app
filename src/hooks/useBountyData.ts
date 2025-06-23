@@ -24,7 +24,7 @@ export interface BountyTask {
   id: string
   title: string
   description: string
-  platform: 'x' | 'telegram' | 'general'
+  platform: 'telegram' | 'general'
   points: number
   status: 'not_started' | 'in_progress' | 'verifying' | 'completed'
   action_url?: string
@@ -219,7 +219,7 @@ export const useBountyData = (userId: string) => {
           id: 'follow_x',
           title: 'Follow @pumpeddotfun',
           description: 'Follow @pumpeddotfun on X (Twitter)',
-          platform: 'x',
+          platform: 'telegram',
           points: 25, // Updated to match new point system
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun',
@@ -230,7 +230,7 @@ export const useBountyData = (userId: string) => {
           id: 'repost_launch',
           title: 'Repost Launch Post',
           description: 'Repost our latest launch announcement',
-          platform: 'x',
+          platform: 'telegram',
           points: 50, // Bonus task
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun/status/123456789',
@@ -301,7 +301,7 @@ export const useBountyData = (userId: string) => {
       }))
 
       // For X tasks, show development message instead of auto-completing
-      if (task.platform === 'x') {
+      if (task.platform === 'telegram') {
         // Don't auto-complete X tasks since connections are disabled
         setBountyTasks(prev => ({
           ...prev,
