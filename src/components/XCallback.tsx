@@ -32,19 +32,17 @@ export default function XCallback() {
           setStatus('error')
           return
         }
+        // Always use the authenticated user's id for social_connections
+        const userIdToUse = session.user.id;
         // Ensure user exists in custom users table
-        let userIdToUse = session.user.id;
-        // Try to find existing user by wallet_address
         const { data: userByWallet } = await supabase
           .from('users')
           .select('id')
           .eq('wallet_address', '') // Replace '' with the actual wallet address if available
           .single();
 
-        if (userByWallet) {
-          userIdToUse = userByWallet.id;
-        } else {
-          // Insert new user
+        if (!userByWallet) {
+          // Insert new user if not found by wallet_address
           const { error: insertError } = await supabase.from('users').insert({
             id: session.user.id,
             username: session.user.email || 'XUser',
