@@ -7,7 +7,7 @@ import "jsr:@supabase/functions-js/edge-runtime.d.ts"
 
 const X_API_KEY = Deno.env.get("X_API_KEY")
 const X_API_SECRET = Deno.env.get("X_API_SECRET")
-const CALLBACK_URL = Deno.env.get("X_CALLBACK_URL") || "https://your-callback-url.com" // Update as needed
+const CALLBACK_URL = Deno.env.get("X_CALLBACK_URL") || "https://pumped.fun/x-callback"
 
 function percentEncode(str: string) {
   return encodeURIComponent(str)
@@ -43,11 +43,28 @@ async function getOAuthSignature(baseString: string, signingKey: string) {
   return btoa(String.fromCharCode(...new Uint8Array(signature)))
 }
 
+function withCORS(response: Response) {
+  const headers = new Headers(response.headers)
+  headers.set("Access-Control-Allow-Origin", "https://pumped.fun")
+  headers.set("Access-Control-Allow-Methods", "POST, OPTIONS")
+  headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+  return new Response(response.body, {
+    status: response.status,
+    statusText: response.statusText,
+    headers,
+  })
+}
+
 console.log("Hello from Functions!")
 
 Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    // Handle preflight
+    return withCORS(new Response(null, { status: 204 }))
+  }
+
   if (req.method !== "POST") {
-    return new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 })
+    return withCORS(new Response(JSON.stringify({ error: "Method not allowed" }), { status: 405 }))
   }
 
   let body: any = {}
@@ -104,18 +121,18 @@ Deno.serve(async (req) => {
 
     const text = await response.text()
     if (!response.ok) {
-      return new Response(JSON.stringify({ error: "Failed to get access token", details: text }), { status: 500 })
+      return withCORS(new Response(JSON.stringify({ error: "Failed to get access token", details: text }), { status: 500 }))
     }
 
     // Parse response: oauth_token, oauth_token_secret, user_id, screen_name
     const result = Object.fromEntries(Array.from((new URLSearchParams(text)) as any))
     if (!result.oauth_token || !result.user_id || !result.screen_name) {
-      return new Response(JSON.stringify({ error: "Missing data in access token response", details: result }), { status: 500 })
+      return withCORS(new Response(JSON.stringify({ error: "Missing data in access token response", details: result }), { status: 500 }))
     }
 
     // TODO: Save to DB here (user_id, screen_name, oauth_token, oauth_token_secret)
     // For now, just return success and the info
-    return new Response(
+    return withCORS(new Response(
       JSON.stringify({
         success: true,
         x_user_id: result.user_id,
@@ -124,7 +141,7 @@ Deno.serve(async (req) => {
         oauth_token_secret: result.oauth_token_secret
       }),
       { headers: { "Content-Type": "application/json" } }
-    )
+    ))
   }
 
   // Step 1: Obtain a request token from X
@@ -170,18 +187,18 @@ Deno.serve(async (req) => {
 
   const text = await response.text()
   if (!response.ok) {
-    return new Response(JSON.stringify({ error: "Failed to get request token", details: text }), { status: 500 })
+    return withCORS(new Response(JSON.stringify({ error: "Failed to get request token", details: text }), { status: 500 }))
   }
 
   // Parse response: oauth_token, oauth_token_secret, oauth_callback_confirmed
   const result = Object.fromEntries(Array.from((new URLSearchParams(text)) as any))
   if (!result.oauth_token) {
-    return new Response(JSON.stringify({ error: "No oauth_token in response", details: result }), { status: 500 })
+    return withCORS(new Response(JSON.stringify({ error: "No oauth_token in response", details: result }), { status: 500 }))
   }
 
   // Step 2: Return the authorization URL for the frontend
   const authUrl = `https://api.twitter.com/oauth/authorize?oauth_token=${result.oauth_token}`
-  return new Response(JSON.stringify({ authUrl }), { headers: { "Content-Type": "application/json" } })
+  return withCORS(new Response(JSON.stringify({ authUrl }), { headers: { "Content-Type": "application/json" } }))
 })
 
 /* To invoke locally:
