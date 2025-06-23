@@ -126,13 +126,16 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                 {connectionsLoading ? (
                   <span className="text-xs text-gray-400">Loading...</span>
                 ) : xConnection ? (
-                  <button
-                    onClick={() => handleDisconnectSocial('x')}
-                    className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    <Unlink className="w-3 h-3" />
-                    <span>Disconnect</span>
-                  </button>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => handleDisconnectSocial('x')}
+                      className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
+                    >
+                      <Unlink className="w-3 h-3" />
+                      <span>Disconnect</span>
+                    </button>
+                    <span className="text-xs text-gray-300">@{xConnection.platform_username}</span>
+                  </div>
                 ) : (
                   <button
                     onClick={handleConnectX}
