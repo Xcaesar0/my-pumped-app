@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 
 const Auth0Linker = () => {
   const { user: auth0User, isAuthenticated, logout, isLoading } = useAuth0();
-  const { user: supabaseUser, refreshSocialConnections } = useUser();
+  const { user: supabaseUser, refreshUser } = useUser();
 
   useEffect(() => {
     const linkAccount = async () => {
@@ -38,7 +38,7 @@ const Auth0Linker = () => {
         if (dbError) throw dbError;
 
         console.log("Successfully linked X account!");
-        await refreshSocialConnections();
+        await refreshUser();
 
       } catch (error) {
         console.error("Failed to link X account:", error);
@@ -48,7 +48,7 @@ const Auth0Linker = () => {
     };
 
     linkAccount();
-  }, [isLoading, isAuthenticated, auth0User, supabaseUser, logout, refreshSocialConnections]);
+  }, [isLoading, isAuthenticated, auth0User, supabaseUser, logout, refreshUser]);
 
   return null;
 };
