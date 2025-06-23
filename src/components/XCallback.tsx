@@ -41,31 +41,54 @@ export default function XCallback() {
         // Always use the authenticated user's id for social_connections
         const userIdToUse = session.user.id;
         
-        // Try to find existing user by either wallet address or user ID
-        const { data: existingUser, error: userError } = await supabase
-          .from('users')
-          .select('*')
-          .or(`wallet_address.eq.${address?.toLowerCase()},id.eq.${userIdToUse}`)
-          .maybeSingle();
-
-        if (userError) {
-          console.error('Error finding user:', userError);
-          setError('Failed to find user: ' + userError.message);
-          setStatus('error');
-          return;
+        // Try to find existing user by wallet address first
+        let existingUser = null;
+        if (address) {
+          const { data: userByWallet, error: walletError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('wallet_address', address.toLowerCase())
+            .maybeSingle();
+          
+          if (walletError) {
+            console.error('Error finding user by wallet:', walletError);
+          } else if (userByWallet) {
+            existingUser = userByWallet;
+          }
         }
 
+        // If no user found by wallet, try by user ID
         if (!existingUser) {
-          // Insert new user if not found
-          const { error: insertError } = await supabase.from('users').insert({
-            id: userIdToUse,
-            username: session.user.email || twitterIdentity.identity_data?.username || 'XUser',
-            is_active: true,
-            points: 0,
-            wallet_address: address?.toLowerCase() || userIdToUse, // Use wallet address if available, otherwise use user ID
-            current_points: 0,
-            current_rank: 0
-          });
+          const { data: userById, error: idError } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userIdToUse)
+            .maybeSingle();
+          
+          if (idError) {
+            console.error('Error finding user by ID:', idError);
+            setError('Failed to find user: ' + idError.message);
+            setStatus('error');
+            return;
+          }
+          
+          existingUser = userById;
+        }
+
+        // If still no user found, create a new one
+        if (!existingUser) {
+          const { data: newUser, error: insertError } = await supabase
+            .from('users')
+            .insert({
+              id: userIdToUse,
+              username: session.user.email || twitterIdentity.identity_data?.username || 'XUser',
+              is_active: true,
+              wallet_address: address?.toLowerCase() || userIdToUse,
+              current_points: 0,
+              current_rank: 0
+            })
+            .select()
+            .single();
 
           if (insertError) {
             console.error('Error creating user:', insertError);
@@ -73,6 +96,8 @@ export default function XCallback() {
             setStatus('error');
             return;
           }
+
+          existingUser = newUser;
         }
 
         // Upsert into social_connections table using userIdToUse
