@@ -40,8 +40,24 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleConnectX = async () => {
-    // Placeholder for X account connection logic
-    alert('X account linking is not currently implemented.');
+    try {
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_FUNCTION_URL || '/functions/v1/x-oauth'}`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      )
+      const data = await response.json()
+      if (data.authUrl) {
+        window.location.href = data.authUrl
+      } else {
+        alert('Failed to get X authorization URL.')
+      }
+    } catch (err) {
+      alert('Error starting X OAuth flow.')
+      console.error(err)
+    }
   }
 
   return (
