@@ -2,16 +2,17 @@ import React, { useState } from 'react';
 import { Wallet, User as UserIcon, Gift, Award } from 'lucide-react';
 import { useWeb3Modal } from '@web3modal/wagmi/react';
 import { useAccount } from 'wagmi';
+import { useUser } from '../hooks/useUser';
 import Logo from './Logo';
 import ProfileSettingsModal from './ProfileSettingsModal';
 import RewardsModal from './RewardsModal';
-import { User } from '../hooks/useUser';
 
-const Header = ({ user, loading }: { user: User | null; loading: boolean }) => {
+const Header = () => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showRewardsModal, setShowRewardsModal] = useState(false);
   const { open } = useWeb3Modal();
   const { address, isConnected } = useAccount();
+  const { user, loading } = useUser();
 
   const handleWalletClick = () => {
     if (!isConnected) {
@@ -211,7 +212,6 @@ const Header = ({ user, loading }: { user: User | null; loading: boolean }) => {
       {/* Rewards Modal */}
       {showRewardsModal && user && (
         <RewardsModal
-          user={user}
           onClose={() => setShowRewardsModal(false)}
         />
       )}

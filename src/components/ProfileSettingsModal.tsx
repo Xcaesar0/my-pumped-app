@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import { X, Settings, LogOut, Unlink, AlertCircle } from 'lucide-react'
 import { User } from '../lib/supabase'
-import { useUser } from '../hooks/useUser'
+import { useSocialConnections } from '../hooks/useSocialConnections'
 import { useDisconnect } from 'wagmi'
 import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
@@ -16,18 +16,18 @@ interface ProfileSettingsModalProps {
 
 const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClose }) => {
   const { 
-    connections,
-    loading: userLoading,
-    refreshUser
-  } = useUser();
+    getConnectionByPlatform, 
+    removeConnection,
+    loading: connectionsLoading 
+  } = useSocialConnections(user.id)
   
   const { disconnect } = useDisconnect()
   const { loginWithRedirect } = useAuth0()
   
   const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
 
-  const telegramConnection = connections.find(c => c.platform === 'telegram')
-  const xConnection = connections.find(c => c.platform === 'x')
+  const telegramConnection = getConnectionByPlatform('telegram')
+  const xConnection = getConnectionByPlatform('x')
 
   const handleDisconnectWallet = () => {
     disconnect()
@@ -35,13 +35,9 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleDisconnectSocial = async (platform: 'telegram' | 'x') => {
-    const connection = connections.find(c => c.platform === platform);
+    const connection = getConnectionByPlatform(platform)
     if (connection) {
-      await supabase
-        .from('social_connections')
-        .delete()
-        .eq('id', connection.id);
-      await refreshUser();
+      await removeConnection(connection.id)
     }
   }
 
@@ -88,7 +84,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <TelegramIcon className="w-5 h-5 text-blue-400" />
                   <span className="text-sm font-medium text-white">Telegram</span>
                 </div>
-                {userLoading ? (
+                {connectionsLoading ? (
                   <span className="text-xs text-gray-400">Loading...</span>
                 ) : telegramConnection ? (
                   <button
@@ -116,7 +112,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <XIcon className="w-5 h-5 text-white" />
                   <span className="text-sm font-medium text-white">X (Twitter)</span>
                 </div>
-                {userLoading ? (
+                {connectionsLoading ? (
                   <span className="text-xs text-gray-400">Loading...</span>
                 ) : xConnection ? (
                   <button

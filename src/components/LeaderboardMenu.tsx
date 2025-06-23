@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { X, Trophy, Medal, Award, Crown } from 'lucide-react'
-import { LeaderboardEntry, getLeaderboard, getUserRank } from '../lib/supabase'
-import { User } from '../hooks/useUser'
+import { User, LeaderboardEntry, getLeaderboard, getUserRank } from '../lib/supabase'
 
 interface LeaderboardMenuProps {
   user: User
@@ -99,7 +98,7 @@ const LeaderboardMenu: React.FC<LeaderboardMenuProps> = ({ user, onClose }) => {
               </div>
               <div className="text-right">
                 <p className="text-lg font-bold text-blue-400">#{userRank}</p>
-                <p className="text-sm text-gray-400">{user.points} pts</p>
+                <p className="text-sm text-gray-400">{user.current_points} pts</p>
               </div>
             </div>
           </div>

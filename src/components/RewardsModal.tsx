@@ -2,14 +2,12 @@ import React, { useState } from 'react'
 import { X, Gift, Award } from 'lucide-react'
 import CashNFTRewards from './CashNFTRewards'
 import NameTagRewards from './NameTagRewards'
-import { User } from '../hooks/useUser'
 
 interface RewardsModalProps {
-  user: User
   onClose: () => void
 }
 
-const RewardsModal: React.FC<RewardsModalProps> = ({ user, onClose }) => {
+const RewardsModal: React.FC<RewardsModalProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'cash' | 'nametags'>('cash')
 
   return (

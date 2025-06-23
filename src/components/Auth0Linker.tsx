@@ -4,8 +4,8 @@ import { useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 
 const Auth0Linker = () => {
-  const { user: auth0User, isAuthenticated, isLoading } = useAuth0();
-  const { user: supabaseUser, fetchUser } = useUser();
+  const { user: auth0User, isAuthenticated, logout, isLoading } = useAuth0();
+  const { user: supabaseUser, refreshSocialConnections } = useUser();
 
   useEffect(() => {
     const linkAccount = async () => {
@@ -38,15 +38,17 @@ const Auth0Linker = () => {
         if (dbError) throw dbError;
 
         console.log("Successfully linked X account!");
-        await fetchUser();
+        await refreshSocialConnections();
 
       } catch (error) {
         console.error("Failed to link X account:", error);
+      } finally {
+        logout({ logoutParams: { returnTo: window.location.origin } });
       }
     };
 
     linkAccount();
-  }, [isLoading, isAuthenticated, auth0User, supabaseUser, fetchUser]);
+  }, [isLoading, isAuthenticated, auth0User, supabaseUser, logout, refreshSocialConnections]);
 
   return null;
 };

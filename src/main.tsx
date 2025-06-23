@@ -16,7 +16,7 @@ root.render(
       domain="dev-zhv5b08q30xa1r26.us.auth0.com"
       clientId="vtgbmQsj4NzNamWabs0AJa92XVBDbRaR"
       authorizationParams={{
-        redirect_uri: window.location.origin
+        redirect_uri: "https://pumped.fun/callback"
       }}
     >
       <App />
