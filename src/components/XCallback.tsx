@@ -73,7 +73,7 @@ export default function XCallback() {
         }
         setStatus('success')
         setTimeout(() => {
-          navigate('/')
+          window.location.href = '/'
         }, 2000)
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred')
