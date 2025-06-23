@@ -76,7 +76,7 @@ export interface LeaderboardEntry {
 export interface SocialConnection {
   id: string
   user_id: string
-  platform: 'telegram'
+  platform: 'telegram' | 'x'
   platform_user_id: string
   platform_username: string
   connected_at: string

@@ -78,11 +78,11 @@ export const useSocialConnections = (userId: string | null) => {
     }
   }
 
-  const getConnectionByPlatform = (platform: 'telegram') => {
+  const getConnectionByPlatform = (platform: 'telegram' | 'x') => {
     return connections.find(conn => conn.platform === platform && conn.is_active)
   }
 
-  const isConnected = (platform: 'telegram') => {
+  const isConnected = (platform: 'telegram' | 'x') => {
     return !!getConnectionByPlatform(platform)
   }
 

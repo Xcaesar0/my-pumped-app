@@ -6,6 +6,7 @@ import { useDisconnect } from 'wagmi'
 import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
 import { supabase } from '../lib/supabase'
+import XIcon from './icons/XIcon'
 
 interface ProfileSettingsModalProps {
   user: User
@@ -22,8 +23,11 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const { disconnect } = useDisconnect()
   
   const [socialModal, setSocialModal] = useState<'telegram' | null>(null)
+  const [xLoading, setXLoading] = useState(false)
+  const [xError, setXError] = useState<string | null>(null)
 
   const telegramConnection = getConnectionByPlatform('telegram')
+  const xConnection = getConnectionByPlatform('x')
 
   const handleDisconnectWallet = () => {
     disconnect()
@@ -34,6 +38,24 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
     const connection = getConnectionByPlatform('telegram')
     if (connection) {
       await removeConnection(connection.id)
+    }
+  }
+
+  const handleConnectX = async () => {
+    setXLoading(true)
+    setXError(null)
+    try {
+      // Call Edge Function to get the X OAuth URL
+      const res = await fetch('/functions/v1/x-oauth2/start', { method: 'GET', credentials: 'include' })
+      if (res.redirected) {
+        window.location.href = res.url
+        return
+      }
+      setXError('Failed to start X OAuth flow')
+    } catch (err) {
+      setXError('Failed to start X OAuth flow')
+    } finally {
+      setXLoading(false)
     }
   }
 
@@ -91,6 +113,37 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   </button>
                 )}
               </div>
+              <div
+                className="w-full flex items-center justify-between p-4 rounded-lg"
+                style={{ backgroundColor: '#262626' }}
+              >
+                <div className="flex items-center space-x-3">
+                  <XIcon className="w-5 h-5 text-white" />
+                  <span className="text-sm font-medium text-white">X (Twitter)</span>
+                </div>
+                {connectionsLoading ? (
+                  <span className="text-xs text-gray-400">Loading...</span>
+                ) : xConnection ? (
+                  <div className="flex items-center space-x-2">
+                    {xConnection.provider_metadata?.x_avatar_url && (
+                      <img src={xConnection.provider_metadata.x_avatar_url} alt="X Avatar" className="w-6 h-6 rounded-full" />
+                    )}
+                    <span className="text-xs text-white font-medium">@{xConnection.provider_metadata?.x_username}</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={handleConnectX}
+                    disabled={xLoading}
+                    className="px-3 py-1 text-xs font-medium bg-black text-white rounded-md border border-gray-700 hover:bg-gray-900 flex items-center space-x-2"
+                  >
+                    <XIcon className="w-4 h-4 mr-1" />
+                    <span>{xLoading ? 'Connecting...' : 'Connect'}</span>
+                  </button>
+                )}
+              </div>
+              {xError && (
+                <div className="text-xs text-red-500 mt-1 flex items-center"><AlertCircle className="w-3 h-3 mr-1" />{xError}</div>
+              )}
             </div>
           </div>
 
