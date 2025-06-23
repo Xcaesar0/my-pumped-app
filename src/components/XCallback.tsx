@@ -39,17 +39,17 @@ export default function XCallback() {
           .eq('id', session.user.id)
           .single()
         if (!existingUser) {
-          // Insert user into your custom users table with default values for required fields
-          const { error: insertUserError } = await supabase.from('users').insert({
+          // Upsert user into your custom users table with wallet_address as conflict target
+          const { error: upsertUserError } = await supabase.from('users').upsert({
             id: session.user.id,
             username: session.user.email || 'XUser', // or another default
             is_active: true,
             points: 0,
             wallet_address: '', // Always provide a value for wallet_address
             // add other required fields with defaults if needed
-          })
-          if (insertUserError) {
-            setError('Failed to create user: ' + insertUserError.message)
+          }, { onConflict: 'wallet_address' })
+          if (upsertUserError) {
+            setError('Failed to create user: ' + upsertUserError.message)
             setStatus('error')
             return
           }
