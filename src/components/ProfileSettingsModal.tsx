@@ -18,30 +18,17 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
     getConnectionByPlatform, 
     removeConnection,
     loading: connectionsLoading,
-    loadConnections
+    loadConnections,
+    error: connectionError
   } = useSocialConnections(user.id)
   
   const { disconnect } = useDisconnect()
   
   const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
-  const [disconnectingPlatform, setDisconnectingPlatform] = useState<'telegram' | 'x' | null>(null)
-  const [connectingX, setConnectingX] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
-
-  // Reset loading states if they've been stuck for too long
-  useEffect(() => {
-    const resetStuckLoadingStates = () => {
-      setDisconnectingPlatform(null)
-      setConnectingX(false)
-    }
-
-    // Reset after 10 seconds if still loading
-    const timeoutId = setTimeout(resetStuckLoadingStates, 10000)
-    return () => clearTimeout(timeoutId)
-  }, [disconnectingPlatform, connectingX])
 
   useEffect(() => {
     loadConnections();
@@ -53,30 +40,21 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleDisconnectSocial = async (platform: 'telegram' | 'x') => {
-    if (disconnectingPlatform) return; // Prevent multiple disconnects
-
     const connection = getConnectionByPlatform(platform)
     if (connection) {
       try {
         setError(null)
-        setDisconnectingPlatform(platform)
         await removeConnection(connection.id)
-        await loadConnections() // Refresh connections after disconnect
       } catch (err) {
         console.error(`Error disconnecting ${platform}:`, err)
         setError(`Failed to disconnect ${platform}. Please try again.`)
-      } finally {
-        setDisconnectingPlatform(null)
       }
     }
   }
 
   const handleConnectX = async () => {
-    if (connectingX) return; // Prevent multiple connection attempts
-
     try {
       setError(null)
-      setConnectingX(true)
       const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
@@ -86,40 +64,12 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
       if (authError) {
         console.error('Error starting Twitter OAuth:', authError)
         setError('Failed to start X connection. Please try again.')
-        setConnectingX(false)
       }
     } catch (err) {
       console.error('Error initiating X connection:', err)
       setError('Failed to start X connection. Please try again.')
-      setConnectingX(false)
     }
   }
-
-  const LoadingSpinner = () => (
-    <div className="flex items-center space-x-2">
-      <svg className="animate-spin w-4 h-4 text-blue-400" viewBox="0 0 24 24">
-        <circle 
-          className="opacity-25" 
-          cx="12" 
-          cy="12" 
-          r="10" 
-          stroke="currentColor" 
-          strokeWidth="4"
-          fill="none"
-        />
-        <path 
-          className="opacity-75" 
-          fill="currentColor" 
-          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-        />
-      </svg>
-      <span className="text-xs text-gray-400">
-        {disconnectingPlatform === 'telegram' ? 'Disconnecting...' :
-         disconnectingPlatform === 'x' ? 'Disconnecting...' :
-         connectingX ? 'Connecting...' : 'Loading...'}
-      </span>
-    </div>
-  )
 
   return (
     <>
@@ -145,11 +95,11 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
         </div>
 
         <div className="space-y-6">
-          {error && (
+          {(error || connectionError) && (
             <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
               <div className="flex items-center space-x-2">
                 <AlertCircle className="w-5 h-5 text-red-400" />
-                <p className="text-sm text-red-400">{error}</p>
+                <p className="text-sm text-red-400">{error || connectionError}</p>
               </div>
             </div>
           )}
@@ -165,13 +115,16 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <TelegramIcon className="w-5 h-5 text-blue-400" />
                   <span className="text-sm font-medium text-white">Telegram</span>
                 </div>
-                {connectionsLoading || disconnectingPlatform === 'telegram' ? (
-                  <LoadingSpinner />
+                {connectionsLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+                    <span className="text-xs text-gray-400">Loading...</span>
+                  </div>
                 ) : telegramConnection ? (
                   <button
                     onClick={() => handleDisconnectSocial('telegram')}
                     className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
-                    disabled={!!disconnectingPlatform}
+                    disabled={connectionsLoading}
                   >
                     <Unlink className="w-3 h-3" />
                     <span>Disconnect</span>
@@ -180,7 +133,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <button
                     onClick={() => setSocialModal('telegram')}
                     className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
-                    disabled={!!disconnectingPlatform}
+                    disabled={connectionsLoading}
                   >
                     Connect
                   </button>
@@ -195,14 +148,17 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <XIcon className="w-5 h-5 text-white" />
                   <span className="text-sm font-medium text-white">X (Twitter)</span>
                 </div>
-                {connectionsLoading || disconnectingPlatform === 'x' || connectingX ? (
-                  <LoadingSpinner />
+                {connectionsLoading ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+                    <span className="text-xs text-gray-400">Loading...</span>
+                  </div>
                 ) : xConnection ? (
                   <div className="flex items-center space-x-2">
                     <button
                       onClick={() => handleDisconnectSocial('x')}
                       className="flex items-center space-x-1.5 px-3 py-1 text-xs font-medium bg-red-500 text-white rounded-md hover:bg-red-600"
-                      disabled={!!disconnectingPlatform}
+                      disabled={connectionsLoading}
                     >
                       <Unlink className="w-3 h-3" />
                       <span>Disconnect</span>
@@ -213,7 +169,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <button
                     onClick={handleConnectX}
                     className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
-                    disabled={connectingX || !!disconnectingPlatform}
+                    disabled={connectionsLoading}
                   >
                     Connect
                   </button>

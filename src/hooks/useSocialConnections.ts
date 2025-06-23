@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { SocialConnection, getSocialConnections, createSocialConnection, deleteSocialConnection } from '../lib/supabase'
 
 export const useSocialConnections = (userId: string | null) => {
@@ -6,17 +6,7 @@ export const useSocialConnections = (userId: string | null) => {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (userId && userId !== 'undefined') {
-      loadConnections()
-    } else {
-      // Clear connections when no user
-      setConnections([])
-      setLoading(false)
-    }
-  }, [userId])
-
-  const loadConnections = async () => {
+  const loadConnections = useCallback(async () => {
     if (!userId || userId === 'undefined') {
       setConnections([])
       setLoading(false)
@@ -28,12 +18,42 @@ export const useSocialConnections = (userId: string | null) => {
 
     try {
       const data = await getSocialConnections(userId)
-      setConnections(data)
+      setConnections(data || [])
     } catch (err) {
-      console.error('Error loading social connections:', err)
-      setError(err instanceof Error ? err.message : 'Failed to load connections')
-      // Set empty connections on error to avoid showing false positive
+      console.error('Error loading connections:', err)
+      setError('Failed to load social connections')
+    } finally {
+      setLoading(false)
+    }
+  }, [userId])
+
+  useEffect(() => {
+    if (userId && userId !== 'undefined') {
+      loadConnections()
+    } else {
       setConnections([])
+      setLoading(false)
+    }
+  }, [userId, loadConnections])
+
+  const getConnectionByPlatform = useCallback((platform: string) => {
+    return connections.find(conn => conn.platform === platform)
+  }, [connections])
+
+  const removeConnection = async (connectionId: string) => {
+    if (!userId) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      await deleteSocialConnection(connectionId)
+      // Don't set connections here - wait for loadConnections to do it
+      await loadConnections() // This will update the connections state
+    } catch (err) {
+      console.error('Error removing connection:', err)
+      setError('Failed to remove connection')
+      throw err // Propagate error to component
     } finally {
       setLoading(false)
     }
@@ -71,23 +91,6 @@ export const useSocialConnections = (userId: string | null) => {
     }
   }
 
-  const removeConnection = async (connectionId: string) => {
-    setLoading(true)
-    try {
-      await deleteSocialConnection(connectionId)
-      setConnections(prev => prev.filter(conn => conn.id !== connectionId))
-    } catch (err) {
-      console.error('Error removing social connection:', err)
-      throw err
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const getConnectionByPlatform = (platform: 'telegram' | 'x') => {
-    return connections.find(conn => conn.platform === platform && conn.is_active)
-  }
-
   const isConnected = (platform: 'telegram' | 'x') => {
     return !!getConnectionByPlatform(platform)
   }
@@ -96,10 +99,10 @@ export const useSocialConnections = (userId: string | null) => {
     connections,
     loading,
     error,
+    getConnectionByPlatform,
+    removeConnection,
     loadConnections,
     addConnection,
-    removeConnection,
-    getConnectionByPlatform,
     isConnected
   }
 }
