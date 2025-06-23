@@ -7,6 +7,7 @@ import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
 import XIcon from './icons/XIcon'
 import { supabase } from '../lib/supabase'
+import { useAuth0 } from '@auth0/auth0-react'
 
 interface ProfileSettingsModalProps {
   user: User
@@ -21,6 +22,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   } = useSocialConnections(user.id)
   
   const { disconnect } = useDisconnect()
+  const { loginWithRedirect } = useAuth0()
   
   const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
 
@@ -40,9 +42,11 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleConnectX = async () => {
-    // TODO: Implement Auth0 login flow
-    console.log("Connect X button clicked - to be replaced with Auth0");
-    alert("This will be replaced with the new Auth0 login flow.");
+    await loginWithRedirect({
+      authorizationParams: {
+        connection: 'twitter',
+      }
+    })
   }
 
   return (
