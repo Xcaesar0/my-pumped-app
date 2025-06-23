@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { X, Settings, LogOut, Unlink, AlertCircle } from 'lucide-react'
 import { User } from '../lib/supabase'
 import { useSocialConnections } from '../hooks/useSocialConnections'
@@ -17,7 +17,8 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const { 
     getConnectionByPlatform, 
     removeConnection,
-    loading: connectionsLoading 
+    loading: connectionsLoading,
+    loadConnections
   } = useSocialConnections(user.id)
   
   const { disconnect } = useDisconnect()
@@ -26,6 +27,10 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
+
+  useEffect(() => {
+    loadConnections();
+  }, [user.id]);
 
   const handleDisconnectWallet = () => {
     disconnect()
