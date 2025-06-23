@@ -45,6 +45,7 @@ export default function XCallback() {
             username: session.user.email || 'XUser', // or another default
             is_active: true,
             points: 0,
+            wallet_address: '', // Always provide a value for wallet_address
             // add other required fields with defaults if needed
           })
           if (insertUserError) {
