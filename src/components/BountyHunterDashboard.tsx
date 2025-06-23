@@ -37,7 +37,7 @@ import {
   UserStats,
   BountyTask
 } from '../hooks/useBountyData'
-import { useSocialConnections } from '../hooks/useSocialConnections'
+import { useUser } from '../hooks/useUser'
 import { useReferralStatus } from '../hooks/useReferralStatus'
 import SocialConnectionModal from './SocialConnectionModal'
 import SocialConnectionRequiredModal from './SocialConnectionRequiredModal'
@@ -67,7 +67,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     verifyTask
   } = useBountyData(user.id)
 
-  const { getConnectionByPlatform, loading: connectionsLoading } = useSocialConnections(user.id)
+  const { connections, loading: connectionsLoading } = useUser()
   const { referralStatus, loading: referralLoading, refreshReferralStatus } = useReferralStatus(user.id)
 
   // Use the referral code from the user object - ensure it's properly displayed
@@ -92,7 +92,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     
     // Check if user has the required connection for this task
     if (task?.requires_connection && platform === 'telegram') {
-      const connection = getConnectionByPlatform(platform)
+      const connection = connections.find(c => c.platform === platform)
       
       // If no connection exists, show the connection required modal
       if (!connection || !connection.is_active) {
@@ -103,7 +103,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
 
     // Check if user has the required connection for X tasks
     if (task?.requires_connection && platform === 'x') {
-      const connection = getConnectionByPlatform(platform)
+      const connection = connections.find(c => c.platform === platform)
       
       // If no connection exists, show the connection required modal
       if (!connection || !connection.is_active) {
