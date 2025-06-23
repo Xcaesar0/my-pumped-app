@@ -44,7 +44,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
-          redirectTo: window.location.origin + '/callback' // Adjust if you want a different callback route
+          redirectTo: 'https://azrrbhiafveiobbncoon.supabase.co/auth/v1/callback'
         }
       })
       if (error) {
