@@ -30,7 +30,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
 
   useEffect(() => {
     loadConnections();
-  }, [user.id]);
+  }, [user.id, loadConnections]);
 
   const handleDisconnectWallet = () => {
     disconnect()
@@ -49,7 +49,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
-          redirectTo: 'https://pumped.fun/callback'
+          redirectTo: `${window.location.origin}/callback`
         }
       })
       if (error) {

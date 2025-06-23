@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../hooks/useUser'
+import { useSocialConnections } from '../hooks/useSocialConnections'
 
 export default function XCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [error, setError] = useState<string>('')
   const navigate = useNavigate()
   const { user } = useUser()
+  const { loadConnections } = useSocialConnections(user?.id || null)
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -76,6 +78,10 @@ export default function XCallback() {
           setStatus('error')
           return
         }
+
+        // Refresh the connections list
+        await loadConnections()
+        
         setStatus('success')
         setTimeout(() => {
           window.location.href = '/'
@@ -86,7 +92,7 @@ export default function XCallback() {
       }
     }
     handleCallback()
-  }, [navigate])
+  }, [navigate, loadConnections])
 
   if (status === 'loading') {
     return (
