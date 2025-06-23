@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useUser } from '../hooks/useUser'
 import { useSocialConnections } from '../hooks/useSocialConnections'
+import { useAccount } from 'wagmi'
 
 export default function XCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [error, setError] = useState<string>('')
   const navigate = useNavigate()
   const { user } = useUser()
+  const { address } = useAccount()
   const { loadConnections } = useSocialConnections(user?.id || null)
 
   useEffect(() => {
@@ -26,6 +28,7 @@ export default function XCallback() {
           setStatus('error')
           return
         }
+
         // Check if Twitter is linked in user identities
         const identities = session.user.identities || []
         const twitterIdentity = identities.find((id: any) => id.provider === 'twitter')
@@ -34,31 +37,44 @@ export default function XCallback() {
           setStatus('error')
           return
         }
+
         // Always use the authenticated user's id for social_connections
         const userIdToUse = session.user.id;
-        // Ensure user exists in custom users table
-        const { data: userByWallet } = await supabase
+        
+        // Try to find existing user by either wallet address or user ID
+        const { data: existingUser, error: userError } = await supabase
           .from('users')
-          .select('id')
-          .eq('wallet_address', '') // Replace '' with the actual wallet address if available
-          .single();
+          .select('*')
+          .or(`wallet_address.eq.${address?.toLowerCase()},id.eq.${userIdToUse}`)
+          .maybeSingle();
 
-        if (!userByWallet) {
-          // Insert new user if not found by wallet_address
+        if (userError) {
+          console.error('Error finding user:', userError);
+          setError('Failed to find user: ' + userError.message);
+          setStatus('error');
+          return;
+        }
+
+        if (!existingUser) {
+          // Insert new user if not found
           const { error: insertError } = await supabase.from('users').insert({
-            id: session.user.id,
-            username: session.user.email || 'XUser',
+            id: userIdToUse,
+            username: session.user.email || twitterIdentity.identity_data?.username || 'XUser',
             is_active: true,
             points: 0,
-            wallet_address: '', // Always provide a value for wallet_address
-            // ...other fields
+            wallet_address: address?.toLowerCase() || userIdToUse, // Use wallet address if available, otherwise use user ID
+            current_points: 0,
+            current_rank: 0
           });
+
           if (insertError) {
+            console.error('Error creating user:', insertError);
             setError('Failed to create user: ' + insertError.message);
             setStatus('error');
             return;
           }
         }
+
         // Upsert into social_connections table using userIdToUse
         const twitterUsername = twitterIdentity.identity_data?.screen_name || twitterIdentity.identity_data?.username || ''
         const { error: dbError, data: upsertData } = await supabase
@@ -70,10 +86,16 @@ export default function XCallback() {
             platform_username: twitterUsername,
             user_data: twitterIdentity,
             is_active: true
-          }, { onConflict: 'user_id,platform' })
-        console.log('Upsert error:', dbError);
-        console.log('Upsert data:', upsertData);
+          }, { 
+            onConflict: 'user_id,platform',
+            ignoreDuplicates: false
+          })
+          .select()
+
+        console.log('Upsert response:', { error: dbError, data: upsertData });
+        
         if (dbError) {
+          console.error('Failed to save connection:', dbError);
           setError('Failed to save connection: ' + dbError.message)
           setStatus('error')
           return
@@ -87,12 +109,13 @@ export default function XCallback() {
           window.location.href = '/'
         }, 2000)
       } catch (err) {
+        console.error('Callback error:', err);
         setError(err instanceof Error ? err.message : 'An error occurred')
         setStatus('error')
       }
     }
     handleCallback()
-  }, [navigate, loadConnections])
+  }, [navigate, loadConnections, address])
 
   if (status === 'loading') {
     return (
