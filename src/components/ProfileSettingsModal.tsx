@@ -26,6 +26,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
   const [disconnectingPlatform, setDisconnectingPlatform] = useState<'telegram' | 'x' | null>(null)
   const [connectingX, setConnectingX] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -43,10 +44,13 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
     const connection = getConnectionByPlatform(platform)
     if (connection) {
       try {
+        setError(null)
         setDisconnectingPlatform(platform)
         await removeConnection(connection.id)
+        await loadConnections() // Refresh connections after disconnect
       } catch (err) {
         console.error(`Error disconnecting ${platform}:`, err)
+        setError(`Failed to disconnect ${platform}. Please try again.`)
       } finally {
         setDisconnectingPlatform(null)
       }
@@ -55,20 +59,24 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
 
   const handleConnectX = async () => {
     try {
+      setError(null)
       setConnectingX(true)
-      const { error } = await supabase.auth.signInWithOAuth({
+      const { error: authError } = await supabase.auth.signInWithOAuth({
         provider: 'twitter',
         options: {
           redirectTo: `${window.location.origin}/callback`
         }
       })
-      if (error) {
-        console.error('Error starting Twitter OAuth:', error)
+      if (authError) {
+        console.error('Error starting Twitter OAuth:', authError)
+        setError('Failed to start X connection. Please try again.')
+        setConnectingX(false)
       }
     } catch (err) {
       console.error('Error initiating X connection:', err)
+      setError('Failed to start X connection. Please try again.')
+      setConnectingX(false)
     }
-    // Don't set connectingX to false here as we're redirecting away
   }
 
   return (
@@ -95,6 +103,15 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
         </div>
 
         <div className="space-y-6">
+          {error && (
+            <div className="p-4 rounded-lg bg-red-500/10 border border-red-500/30">
+              <div className="flex items-center space-x-2">
+                <AlertCircle className="w-5 h-5 text-red-400" />
+                <p className="text-sm text-red-400">{error}</p>
+              </div>
+            </div>
+          )}
+
           <div>
             <h3 className="text-sm font-medium text-gray-400 mb-2">Social Connections</h3>
             <div className="space-y-3">
@@ -107,7 +124,12 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <span className="text-sm font-medium text-white">Telegram</span>
                 </div>
                 {connectionsLoading || disconnectingPlatform === 'telegram' ? (
-                  <span className="text-xs text-gray-400">Loading...</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+                    <span className="text-xs text-gray-400">
+                      {disconnectingPlatform === 'telegram' ? 'Disconnecting...' : 'Loading...'}
+                    </span>
+                  </div>
                 ) : telegramConnection ? (
                   <button
                     onClick={() => handleDisconnectSocial('telegram')}
@@ -135,7 +157,13 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <span className="text-sm font-medium text-white">X (Twitter)</span>
                 </div>
                 {connectionsLoading || disconnectingPlatform === 'x' || connectingX ? (
-                  <span className="text-xs text-gray-400">Loading...</span>
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+                    <span className="text-xs text-gray-400">
+                      {disconnectingPlatform === 'x' ? 'Disconnecting...' :
+                       connectingX ? 'Connecting...' : 'Loading...'}
+                    </span>
+                  </div>
                 ) : xConnection ? (
                   <div className="flex items-center space-x-2">
                     <button

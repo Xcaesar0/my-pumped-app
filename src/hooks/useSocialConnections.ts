@@ -40,6 +40,7 @@ export const useSocialConnections = (userId: string | null) => {
   }
 
   const addConnection = async (connection: Omit<SocialConnection, 'id' | 'connected_at'>) => {
+    setLoading(true)
     try {
       // Use the upsert-enabled createSocialConnection function
       const upsertedConnection = await createSocialConnection(connection)
@@ -65,16 +66,21 @@ export const useSocialConnections = (userId: string | null) => {
     } catch (err) {
       console.error('Error adding social connection:', err)
       throw err
+    } finally {
+      setLoading(false)
     }
   }
 
   const removeConnection = async (connectionId: string) => {
+    setLoading(true)
     try {
       await deleteSocialConnection(connectionId)
       setConnections(prev => prev.filter(conn => conn.id !== connectionId))
     } catch (err) {
       console.error('Error removing social connection:', err)
       throw err
+    } finally {
+      setLoading(false)
     }
   }
 
