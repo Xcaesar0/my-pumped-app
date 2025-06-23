@@ -32,6 +32,27 @@ export default function XCallback() {
           setStatus('error')
           return
         }
+        // Ensure user exists in custom users table
+        const { data: existingUser } = await supabase
+          .from('users')
+          .select('id')
+          .eq('id', session.user.id)
+          .single()
+        if (!existingUser) {
+          // Insert user into your custom users table with default values for required fields
+          const { error: insertUserError } = await supabase.from('users').insert({
+            id: session.user.id,
+            username: session.user.email || 'XUser', // or another default
+            is_active: true,
+            points: 0,
+            // add other required fields with defaults if needed
+          })
+          if (insertUserError) {
+            setError('Failed to create user: ' + insertUserError.message)
+            setStatus('error')
+            return
+          }
+        }
         // Upsert into social_connections table
         const twitterUsername = twitterIdentity.identity_data?.screen_name || twitterIdentity.identity_data?.username || ''
         const { error: dbError } = await supabase
