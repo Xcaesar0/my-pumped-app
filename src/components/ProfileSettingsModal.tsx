@@ -41,21 +41,14 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
 
   const handleConnectX = async () => {
     try {
-      // Call the Edge Function to get the authorization URL
-      const { data, error } = await supabase.functions.invoke('x-oauth', {
-        body: {
-          action: 'get_auth_url'
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'twitter',
+        options: {
+          redirectTo: window.location.origin + '/callback' // Adjust if you want a different callback route
         }
       })
-
       if (error) {
-        console.error('Error getting X auth URL:', error)
-        return
-      }
-
-      if (data?.auth_url) {
-        // Redirect to X authorization page
-        window.location.href = data.auth_url
+        console.error('Error starting Twitter OAuth:', error)
       }
     } catch (err) {
       console.error('Error initiating X connection:', err)

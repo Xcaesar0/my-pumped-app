@@ -12,81 +12,54 @@ export default function XCallback() {
   useEffect(() => {
     const handleCallback = async () => {
       try {
-        // Check if user is authenticated
-        if (!user?.id) {
-          setError('User not authenticated. Please connect your wallet first.')
+        // Wait for Supabase to update the session after OAuth redirect
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        if (sessionError) {
+          setError('Failed to get session: ' + sessionError.message)
           setStatus('error')
           return
         }
-
-        const urlParams = new URLSearchParams(window.location.search)
-        const oauthToken = urlParams.get('oauth_token')
-        const oauthVerifier = urlParams.get('oauth_verifier')
-        const denied = urlParams.get('denied')
-
-        if (denied) {
-          setError('Authorization was denied by the user')
+        if (!session || !session.user) {
+          setError('No active session. Please try connecting again.')
           setStatus('error')
           return
         }
-
-        if (!oauthToken || !oauthVerifier) {
-          setError('Missing OAuth parameters')
+        // Check if Twitter is linked in user identities
+        const identities = session.user.identities || []
+        const twitterIdentity = identities.find((id: any) => id.provider === 'twitter')
+        if (!twitterIdentity) {
+          setError('Twitter account not linked. Please try again.')
           setStatus('error')
           return
         }
-
-        // Call your Edge Function to exchange the tokens
-        const { data, error } = await supabase.functions.invoke('x-oauth', {
-          body: {
-            action: 'exchange_token',
-            oauth_token: oauthToken,
-            oauth_verifier: oauthVerifier
-          }
-        })
-
-        if (error) {
-          console.error('Edge function error:', error)
-          throw new Error(error.message || 'Failed to exchange tokens')
+        // Upsert into social_connections table
+        const twitterUsername = twitterIdentity.identity_data?.screen_name || twitterIdentity.identity_data?.username || ''
+        const { error: dbError } = await supabase
+          .from('social_connections')
+          .upsert({
+            user_id: session.user.id,
+            platform: 'x',
+            platform_user_id: twitterIdentity.id,
+            platform_username: twitterUsername,
+            user_data: twitterIdentity,
+            is_active: true
+          })
+        if (dbError) {
+          setError('Failed to save connection: ' + dbError.message)
+          setStatus('error')
+          return
         }
-
-        if (data) {
-          // Store the X connection in your database
-          const { error: dbError } = await supabase
-            .from('social_connections')
-            .upsert({
-              user_id: user.id,
-              platform: 'x',
-              platform_user_id: data.user_id,
-              platform_username: data.screen_name,
-              access_token: data.access_token,
-              access_token_secret: data.access_token_secret,
-              user_data: data.user_data,
-              is_active: true
-            })
-
-          if (dbError) {
-            console.error('Database error:', dbError)
-            throw new Error(dbError.message)
-          }
-
-          setStatus('success')
-          // Redirect back to the main app after a short delay
-          setTimeout(() => {
-            navigate('/')
-          }, 2000)
-        } else {
-          throw new Error('No data received from OAuth exchange')
-        }
+        setStatus('success')
+        setTimeout(() => {
+          navigate('/')
+        }, 2000)
       } catch (err) {
-        console.error('X callback error:', err)
         setError(err instanceof Error ? err.message : 'An error occurred')
         setStatus('error')
       }
     }
-
     handleCallback()
-  }, [navigate, user])
+  }, [navigate])
 
   if (status === 'loading') {
     return (
