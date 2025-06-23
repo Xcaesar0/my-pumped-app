@@ -1,17 +1,13 @@
-import React, { useState } from 'react'
-import { Trophy, Target, Users, Star } from 'lucide-react'
-import { User } from '../lib/supabase'
-import TasksMenu from './TasksMenu'
-import LeaderboardMenu from './LeaderboardMenu'
-import BountyHunterDashboard from './BountyHunterDashboard'
+import React from 'react';
+import BountyHunterDashboard from './BountyHunterDashboard';
+import { User } from '../hooks/useUser';
 
-interface ConnectedHeroProps {
-  user: User
-}
+const ConnectedHero = ({ user }: { user: User }) => {
+  return (
+    <div className="text-center">
+      <BountyHunterDashboard user={user} />
+    </div>
+  );
+};
 
-const ConnectedHero: React.FC<ConnectedHeroProps> = ({ user }) => {
-  // Show Bounty Hunter Dashboard by default
-  return <BountyHunterDashboard user={user} />
-}
-
-export default ConnectedHero
+export default ConnectedHero;

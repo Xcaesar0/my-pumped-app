@@ -1,20 +1,41 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAccount, useDisconnect } from 'wagmi'
-import { supabase, User, SocialConnection, processReferralFromCode, trackReferralClick } from '../lib/supabase'
+import { supabase, SocialConnection, processReferralFromCode, trackReferralClick } from '../lib/supabase'
 import { generateUsername } from '../utils/username'
 import { useReferralInfo } from './useReferralInfo'
+import { useAuth0 } from '@auth0/auth0-react'
+
+export type User = {
+  id: string;
+  wallet_address: string;
+  username: string;
+  referral_code: string;
+  points: number;
+  social_connections: {
+    [key: string]: any;
+  } | null;
+  created_at: string;
+};
 
 export const useUser = () => {
   const { address, isConnected } = useAccount()
   const [user, setUser] = useState<User | null>(null)
   const [connections, setConnections] = useState<SocialConnection[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const { disconnect } = useDisconnect()
   const [error, setError] = useState<string | null>(null)
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false)
   const [isNewUser, setIsNewUser] = useState<boolean>(false)
   const { referralCode, clearReferralInfo } = useReferralInfo()
+  const {
+    loginWithRedirect: auth0Login, 
+    logout: auth0Logout, 
+    user: auth0User, 
+    isAuthenticated: isAuth0Authenticated,
+    getAccessTokenSilently
+  } = useAuth0()
 
-  const refreshUser = useCallback(async () => {
+  const fetchUser = useCallback(async () => {
     if (!address) {
       setUser(null)
       setConnections([])
@@ -80,26 +101,26 @@ export const useUser = () => {
   }, [address])
 
   const refreshSocialConnections = async () => {
-    await refreshUser();
+    await fetchUser();
   };
 
   useEffect(() => {
     if (isConnected) {
-      refreshUser()
+      fetchUser()
     } else {
       setUser(null)
       setConnections([])
       setError(null)
       setIsNewUser(false)
     }
-  }, [address, isConnected, refreshUser])
+  }, [address, isConnected, fetchUser])
 
   const handleReferralModalClose = () => {
     setShowReferralModal(false)
   }
 
   const handleReferralSuccess = () => {
-    refreshUser()
+    fetchUser()
   }
 
   return { 
@@ -109,7 +130,7 @@ export const useUser = () => {
     error, 
     isConnected, 
     isNewUser, 
-    refreshUser,
+    fetchUser,
     refreshSocialConnections,
     showReferralModal,
     handleReferralModalClose,

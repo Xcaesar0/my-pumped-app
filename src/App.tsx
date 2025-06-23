@@ -36,25 +36,26 @@ if (!projectId || projectId === 'your_project_id_here') {
 // Create a client
 const queryClient = new QueryClient()
 
-function AppContent() {
-  const { user } = useUser()
+function AppContent({ user, loading }: { user: any, loading: boolean }) {
 
   return (
     <div className="min-h-screen text-white overflow-x-hidden" style={{ backgroundColor: '#1A1A1A' }}>
       <Auth0Linker />
-      <Header />
-      <Hero />
+      <Header user={user} loading={loading} />
+      <Hero user={user} loading={loading} />
     </div>
   )
 }
 
 function App() {
+  const { user, loading } = useUser();
+
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Routes>
-            <Route path="/" element={<AppContent />} />
+            <Route path="/" element={<AppContent user={user} loading={loading} />} />
             <Route path="/referral/:referralCode" element={<ReferralPageWrapper />} />
           </Routes>
         </BrowserRouter>
