@@ -56,7 +56,7 @@ export default function XCallback() {
         }
         // Upsert into social_connections table
         const twitterUsername = twitterIdentity.identity_data?.screen_name || twitterIdentity.identity_data?.username || ''
-        const { error: dbError } = await supabase
+        const { error: dbError, data: upsertData } = await supabase
           .from('social_connections')
           .upsert({
             user_id: session.user.id,
@@ -66,6 +66,8 @@ export default function XCallback() {
             user_data: twitterIdentity,
             is_active: true
           }, { onConflict: 'user_id,platform' })
+        console.log('Upsert error:', dbError);
+        console.log('Upsert data:', upsertData);
         if (dbError) {
           setError('Failed to save connection: ' + dbError.message)
           setStatus('error')
