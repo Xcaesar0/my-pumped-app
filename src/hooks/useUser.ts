@@ -26,14 +26,8 @@ export const useUser = () => {
   const [error, setError] = useState<string | null>(null)
   const [showReferralModal, setShowReferralModal] = useState<boolean>(false)
   const [isNewUser, setIsNewUser] = useState<boolean>(false)
-  const { referralCode, clearReferralInfo } = useReferralInfo()
-  const {
-    loginWithRedirect: auth0Login, 
-    logout: auth0Logout, 
-    user: auth0User, 
-    isAuthenticated: isAuth0Authenticated,
-    getAccessTokenSilently
-  } = useAuth0()
+  const { referralCode } = useReferralInfo()
+  useAuth0()
 
   const fetchUser = useCallback(async () => {
     if (!address) {
@@ -76,10 +70,7 @@ export const useUser = () => {
           .from('users')
           .insert({ 
             wallet_address: address, 
-            username,
-            current_points: 0,
-            current_rank: 0,
-            connection_timestamp: new Date().toISOString()
+            username
           })
           .select()
           .single();
