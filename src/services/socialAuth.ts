@@ -5,6 +5,10 @@ import { supabase } from '../lib/supabase'
 // Telegram Bot Configuration
 const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME
 
+// Twitter OAuth Configuration
+const TWITTER_CLIENT_ID = import.meta.env.VITE_TWITTER_CLIENT_ID
+const TWITTER_REDIRECT_URI = import.meta.env.VITE_TWITTER_REDIRECT_URI || `${window.location.origin}/callback`
+
 export interface TelegramAuthResult {
   id: number
   username: string
@@ -132,4 +136,47 @@ export const updateUsername = async (userId: string, newUsername: string) => {
   }
 
   return data
+}
+
+export const initiateTwitterAuth = async () => {
+  if (!TWITTER_CLIENT_ID) {
+    throw new Error('Twitter client ID not configured')
+  }
+
+  const { error } = await supabase.auth.signInWithOAuth({
+    provider: 'twitter',
+    options: {
+      redirectTo: `${window.location.origin}/callback`,
+      skipBrowserRedirect: false
+    }
+  })
+
+  if (error) {
+    throw error
+  }
+}
+
+// Function to validate Twitter callback data
+export const validateTwitterCallback = async (): Promise<boolean> => {
+  const { data: { session } } = await supabase.auth.getSession()
+  return !!session?.user?.identities?.some(id => id.provider === 'twitter')
+}
+
+// Create social connection from Twitter data - No longer needed as we use auth table
+export const createSocialConnectionFromTwitter = async () => {
+  throw new Error('This function is deprecated. Twitter connections are now handled by Supabase Auth.')
+}
+
+// Disconnect Twitter - Now uses auth.signOut()
+export const disconnectTwitter = async (): Promise<void> => {
+  const { error } = await supabase.auth.signOut()
+  if (error) {
+    throw error
+  }
+}
+
+// Check Twitter connection - Now checks auth session
+export const checkTwitterConnection = async (): Promise<boolean> => {
+  const { data: { session } } = await supabase.auth.getSession()
+  return !!session?.user?.identities?.some(id => id.provider === 'twitter')
 }

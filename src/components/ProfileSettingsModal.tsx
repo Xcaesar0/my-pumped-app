@@ -40,15 +40,23 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   }
 
   const handleDisconnectSocial = async (platform: 'telegram' | 'x') => {
-    const connection = getConnectionByPlatform(platform)
-    if (connection) {
-      try {
-        setError(null)
-        await removeConnection(connection.id)
-      } catch (err) {
-        console.error(`Error disconnecting ${platform}:`, err)
-        setError(`Failed to disconnect ${platform}. Please try again.`)
+    try {
+      setError(null)
+      if (platform === 'x') {
+        // For Twitter, use auth signOut
+        const { error: signOutError } = await supabase.auth.signOut()
+        if (signOutError) throw signOutError
+        await loadConnections()
+      } else {
+        // For other platforms, use existing connection removal
+        const connection = getConnectionByPlatform(platform)
+        if (connection && 'id' in connection) {
+          await removeConnection(connection.id, platform)
+        }
       }
+    } catch (err) {
+      console.error(`Error disconnecting ${platform}:`, err)
+      setError(`Failed to disconnect ${platform}. Please try again.`)
     }
   }
 
@@ -163,7 +171,6 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                       <Unlink className="w-3 h-3" />
                       <span>Disconnect</span>
                     </button>
-                    <span className="text-xs text-gray-300">@{xConnection.platform_username}</span>
                   </div>
                 ) : (
                   <button
