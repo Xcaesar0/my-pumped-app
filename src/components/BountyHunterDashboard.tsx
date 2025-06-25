@@ -64,7 +64,8 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     loading,
     refreshData,
     beginTask,
-    verifyTask
+    verifyTask,
+    isAuthenticated
   } = useBountyData()
 
   const { getConnectionByPlatform, loading: connectionsLoading } = useSocialConnections(user.id)
@@ -172,6 +173,17 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
       default:
         return <HelpCircle className="w-4 h-4 text-gray-400" />
     }
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-black text-white">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-2">Please log in to view tasks and leaderboard.</h2>
+          <p className="text-gray-400">You must be authenticated to access this page.</p>
+        </div>
+      </div>
+    )
   }
 
   return (

@@ -48,10 +48,12 @@ export const useBountyData = () => {
   useEffect(() => {
     const fetchUserId = async () => {
       const { data: { user } } = await supabase.auth.getUser()
+      console.log('Fetched user in useBountyData:', user)
       if (user?.id) {
         setUserId(user.id)
       } else {
         setUserId(null)
+        console.warn('No authenticated user found in useBountyData.')
       }
     }
     fetchUserId()
@@ -486,6 +488,7 @@ export const useBountyData = () => {
     error,
     refreshData,
     beginTask,
-    verifyTask
+    verifyTask,
+    isAuthenticated: !!userId
   }
 }
