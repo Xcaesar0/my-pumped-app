@@ -300,17 +300,26 @@ export const useBountyData = (userId: string) => {
         )
       }))
 
-      // For X tasks, show development message instead of auto-completing
+      // Honor system for X tasks: immediately mark as completed and award points
       if (task.platform === 'x') {
-        // Don't auto-complete X tasks since connections are disabled
         setBountyTasks(prev => ({
-          ...prev,
-          active: prev.active.map(task =>
-            task.id === taskId ? { ...task, status: 'in_progress' } : task
-          )
+          active: prev.active.filter(t => t.id !== taskId),
+          completed: [...prev.completed, { ...task, status: 'completed' }]
         }))
-        
-        return { success: false, message: 'X integration is currently disabled' }
+
+        // Award points using the increment function
+        const { error: pointsError } = await supabase.rpc('increment_user_points', {
+          user_id_param: userId,
+          points_to_add: task.points
+        })
+
+        if (pointsError) {
+          console.warn('Failed to award points:', pointsError)
+        }
+
+        // Refresh user stats
+        await loadUserStats()
+        return { success: true, message: 'Task completed! You earned points.' }
       }
 
       // For other tasks, simulate verification delay
