@@ -44,26 +44,7 @@ export const useUser = () => {
       const normalizedAddress = address.toLowerCase()
       console.log('📝 Normalized address:', normalizedAddress)
 
-      // 1. Sign a message and get a Supabase JWT from backend
-      if (window.ethereum) {
-        const provider = new ethers.BrowserProvider(window.ethereum)
-        const signer = await provider.getSigner()
-        const message = 'Sign this message to log in to Pumped!'
-        const signature = await signer.signMessage(message)
-        // Call your backend
-        const response = await fetch('https://your-backend.onrender.com/auth/wallet', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ address: normalizedAddress, signature, message }),
-        })
-        const { token } = await response.json()
-        // Set Supabase session
-        await supabase.auth.setSession({ access_token: token, refresh_token: token })
-      } else {
-        throw new Error('No Ethereum provider found')
-      }
-
-      // 2. Try to get existing user
+      // 1. Try to get existing user
       console.log('🔍 Checking for existing user...')
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
