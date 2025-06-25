@@ -43,12 +43,33 @@ export const useBountyData = (walletAddress: string | null) => {
   const [bountyTasks, setBountyTasks] = useState<BountyTasksData>({ active: [], completed: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    if (walletAddress) {
-      loadAllData()
+    const fetchUserId = async () => {
+      if (!walletAddress) {
+        setUserId(null)
+        return
+      }
+      const { data: user, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('wallet_address', walletAddress)
+        .single();
+      if (user && user.id) {
+        setUserId(user.id);
+      } else {
+        setUserId(null);
+      }
+    };
+    fetchUserId();
+  }, [walletAddress]);
+
+  useEffect(() => {
+    if (userId) {
+      loadAllData();
     }
-  }, [walletAddress])
+  }, [userId]);
 
   const loadAllData = async () => {
     setLoading(true)
@@ -69,21 +90,20 @@ export const useBountyData = (walletAddress: string | null) => {
   }
 
   const loadUserStats = async () => {
-    if (!walletAddress) {
-      console.warn('Invalid walletAddress provided to loadUserStats')
+    if (!userId) {
+      console.warn('Invalid userId provided to loadUserStats')
       return
     }
 
     try {
-      // Get user's current data by wallet address
+      // Get user's current data by userId
       const { data: user, error: userError } = await supabase
         .from('users')
-        .select('id, current_points, current_rank')
-        .eq('wallet_address', walletAddress)
+        .select('current_points, current_rank')
+        .eq('id', userId)
         .single()
 
       if (userError) throw userError
-      const userId = user.id
 
       // Get referral count (people this user has referred)
       const { count: referralCount } = await supabase
@@ -184,8 +204,8 @@ export const useBountyData = (walletAddress: string | null) => {
   }
 
   const loadBountyTasks = async () => {
-    if (!walletAddress) {
-      console.warn('Invalid walletAddress provided to loadBountyTasks')
+    if (!userId) {
+      console.warn('Invalid userId provided to loadBountyTasks')
       return
     }
 
@@ -194,7 +214,7 @@ export const useBountyData = (walletAddress: string | null) => {
       const { data: socialConnections } = await supabase
         .from('social_connections')
         .select('platform')
-        .eq('user_id', walletAddress)
+        .eq('user_id', userId)
         .eq('is_active', true)
 
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
@@ -203,7 +223,7 @@ export const useBountyData = (walletAddress: string | null) => {
       const { data: submissions, error: submissionsError } = await supabase
         .from('user_task_submissions')
         .select('admin_task_id, status')
-        .eq('user_id', walletAddress)
+        .eq('user_id', userId)
         .eq('status', 'approved');
       if (submissionsError) {
         console.error('Error loading user task submissions:', submissionsError);
@@ -221,7 +241,7 @@ export const useBountyData = (walletAddress: string | null) => {
       const { data: xCompletions, error: xCompletionsError } = await supabase
         .from('x_task_completions')
         .select('task_title')
-        .eq('user_id', walletAddress);
+        .eq('user_id', userId);
       if (xCompletionsError) {
         console.error('Error loading x_task_completions:', xCompletionsError);
       }
