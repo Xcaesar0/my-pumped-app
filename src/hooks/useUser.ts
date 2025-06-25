@@ -3,6 +3,13 @@ import { useAccount, useDisconnect } from 'wagmi'
 import { supabase, User, processReferralFromCode, trackReferralClick } from '../lib/supabase'
 import { generateUsername } from '../utils/username'
 import { useReferralInfo } from './useReferralInfo'
+import { ethers } from 'ethers'
+
+declare global {
+  interface Window {
+    ethereum?: any;
+  }
+}
 
 export const useUser = () => {
   const { address, isConnected } = useAccount()
@@ -36,8 +43,27 @@ export const useUser = () => {
     try {
       const normalizedAddress = address.toLowerCase()
       console.log('📝 Normalized address:', normalizedAddress)
-      
-      // First, try to get existing user
+
+      // 1. Sign a message and get a Supabase JWT from backend
+      if (window.ethereum) {
+        const provider = new ethers.BrowserProvider(window.ethereum)
+        const signer = await provider.getSigner()
+        const message = 'Sign this message to log in to Pumped!'
+        const signature = await signer.signMessage(message)
+        // Call your backend
+        const response = await fetch('https://your-backend.onrender.com/auth/wallet', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ address: normalizedAddress, signature, message }),
+        })
+        const { token } = await response.json()
+        // Set Supabase session
+        await supabase.auth.setSession({ access_token: token, refresh_token: token })
+      } else {
+        throw new Error('No Ethereum provider found')
+      }
+
+      // 2. Try to get existing user
       console.log('🔍 Checking for existing user...')
       const { data: existingUser, error: fetchError } = await supabase
         .from('users')
@@ -60,10 +86,8 @@ export const useUser = () => {
       } else {
         // Create new user using upsert to handle race conditions
         console.log('🆕 Creating new user for address:', normalizedAddress)
-        
         const username = generateUsername()
         console.log('🎯 Generated username:', username)
-        
         const newUserData: Omit<User, 'id' | 'referral_code'> = {
           wallet_address: normalizedAddress,
           username,
@@ -71,9 +95,7 @@ export const useUser = () => {
           current_points: 0,
           current_rank: 0
         }
-
         console.log('📊 New user data being sent to Supabase:', newUserData)
-
         // Use upsert to handle potential race conditions
         const { data: upsertedUser, error: upsertError } = await supabase
           .from('users')
@@ -83,10 +105,8 @@ export const useUser = () => {
           })
           .select()
           .single()
-
         if (upsertError) {
           console.error('❌ Error upserting user:', upsertError)
-          
           // If upsert fails, try to fetch the existing user one more time
           // This handles the case where another process created the user between our check and upsert
           console.log('🔄 Retrying to fetch user after upsert failure...')
@@ -95,12 +115,10 @@ export const useUser = () => {
             .select('*')
             .eq('wallet_address', normalizedAddress)
             .single()
-
           if (retryError) {
             console.error('❌ Error fetching user after upsert failure:', retryError)
             throw upsertError // Throw the original upsert error
           }
-
           console.log('✅ Found existing user after upsert failure:', retryUser)
           finalUser = retryUser
           userIsNew = false
