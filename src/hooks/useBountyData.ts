@@ -300,60 +300,64 @@ export const useBountyData = (userId: string) => {
         )
       }))
 
-      // Honor system for X tasks: immediately mark as completed and award points
-      if (task.platform === 'x') {
-        setBountyTasks(prev => ({
-          active: prev.active.filter(t => t.id !== taskId),
-          completed: [...prev.completed, { ...task, status: 'completed' }]
-        }))
+      // 1. Fetch the admin_task_id from Supabase
+      const { data: adminTask, error: adminTaskError } = await supabase
+        .from('admin_tasks')
+        .select('id')
+        .eq('title', task.title)
+        .eq('platform', task.platform)
+        .single();
 
-        // Award points using the increment function
-        const { error: pointsError } = await supabase.rpc('increment_user_points', {
-          user_id_param: userId,
-          points_to_add: task.points
-        })
-
-        if (pointsError) {
-          console.warn('Failed to award points:', pointsError)
-        }
-
-        // Refresh user stats
-        await loadUserStats()
-        return { success: true, message: 'Task completed! You earned points.' }
-      }
-
-      // For other tasks, simulate verification delay
-      await new Promise(resolve => setTimeout(resolve, 2000))
-
-      // Mock verification - in production, this would check actual completion
-      const isCompleted = Math.random() > 0.3 // 70% success rate for demo
-
-      if (isCompleted) {
-        setBountyTasks(prev => ({
-          active: prev.active.filter(t => t.id !== taskId),
-          completed: [...prev.completed, { ...task, status: 'completed' }]
-        }))
-
-        // Award points using the increment function
-        const { error: pointsError } = await supabase.rpc('increment_user_points', {
-          user_id_param: userId,
-          points_to_add: task.points
-        })
-
-        if (pointsError) {
-          console.warn('Failed to award points:', pointsError)
-        }
-
-        // Refresh user stats
-        await loadUserStats()
-      } else {
+      if (adminTaskError || !adminTask) {
+        console.warn('Could not find admin_task_id for task:', adminTaskError)
         setBountyTasks(prev => ({
           ...prev,
           active: prev.active.map(task =>
             task.id === taskId ? { ...task, status: 'in_progress' } : task
           )
         }))
+        return { success: false, message: 'Could not verify task. Please try again.' }
       }
+
+      // 2. Insert into user_task_submissions
+      const { error: submissionError } = await supabase
+        .from('user_task_submissions')
+        .insert([
+          {
+            user_id: userId,
+            admin_task_id: adminTask.id,
+            status: 'approved'
+          }
+        ])
+
+      if (submissionError) {
+        console.warn('Failed to record task completion:', submissionError)
+        setBountyTasks(prev => ({
+          ...prev,
+          active: prev.active.map(task =>
+            task.id === taskId ? { ...task, status: 'in_progress' } : task
+          )
+        }))
+        return { success: false, message: 'Could not verify task. Please try again.' }
+      }
+
+      // 3. Mark as completed in UI and award points
+      setBountyTasks(prev => ({
+        active: prev.active.filter(t => t.id !== taskId),
+        completed: [...prev.completed, { ...task, status: 'completed' }]
+      }))
+
+      const { error: pointsError } = await supabase.rpc('increment_user_points', {
+        user_id_param: userId,
+        points_to_add: task.points
+      })
+
+      if (pointsError) {
+        console.warn('Failed to award points:', pointsError)
+      }
+
+      await loadUserStats()
+      return { success: true, message: 'Task completed! You earned points.' }
     } catch (error) {
       console.error('Error verifying task:', error)
       setBountyTasks(prev => ({
