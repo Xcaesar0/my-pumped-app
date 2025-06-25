@@ -65,7 +65,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     refreshData,
     beginTask,
     verifyTask
-  } = useBountyData(user.id)
+  } = useBountyData()
 
   const { getConnectionByPlatform, loading: connectionsLoading } = useSocialConnections(user.id)
   const { referralStatus, loading: referralLoading, refreshReferralStatus } = useReferralStatus(user.id)

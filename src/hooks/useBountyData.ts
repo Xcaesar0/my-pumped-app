@@ -37,12 +37,25 @@ export interface BountyTasksData {
   completed: BountyTask[]
 }
 
-export const useBountyData = (userId: string) => {
+export const useBountyData = () => {
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [bountyTasks, setBountyTasks] = useState<BountyTasksData>({ active: [], completed: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [userId, setUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    const fetchUserId = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user?.id) {
+        setUserId(user.id)
+      } else {
+        setUserId(null)
+      }
+    }
+    fetchUserId()
+  }, [])
 
   useEffect(() => {
     if (userId) {
@@ -69,7 +82,7 @@ export const useBountyData = (userId: string) => {
   }
 
   const loadUserStats = async () => {
-    if (!userId || userId === 'undefined') {
+    if (!userId) {
       console.warn('Invalid userId provided to loadUserStats')
       return
     }
@@ -183,7 +196,7 @@ export const useBountyData = (userId: string) => {
   }
 
   const loadBountyTasks = async () => {
-    if (!userId || userId === 'undefined') {
+    if (!userId) {
       console.warn('Invalid userId provided to loadBountyTasks')
       return
     }
