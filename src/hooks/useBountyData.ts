@@ -37,36 +37,12 @@ export interface BountyTasksData {
   completed: BountyTask[]
 }
 
-export const useBountyData = () => {
+export const useBountyData = (walletAddress: string | null) => {
   const [userStats, setUserStats] = useState<UserStats | null>(null)
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([])
   const [bountyTasks, setBountyTasks] = useState<BountyTasksData>({ active: [], completed: [] })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [walletAddress, setWalletAddress] = useState<string | null>(null)
-
-  useEffect(() => {
-    // Try to get the connected wallet address from window.ethereum or localStorage
-    const getWalletAddress = async () => {
-      let address = null
-      if (window.ethereum && window.ethereum.selectedAddress) {
-        address = window.ethereum.selectedAddress
-      } else if (localStorage.getItem('wagmi.connected')) {
-        // Try to parse from wagmi or your wallet connection lib
-        try {
-          const wagmi = JSON.parse(localStorage.getItem('wagmi.connected'))
-          address = wagmi?.accounts?.[0] || null
-        } catch {}
-      }
-      if (address) {
-        setWalletAddress(address.toLowerCase())
-      } else {
-        setWalletAddress(null)
-        console.warn('No connected wallet found in useBountyData.')
-      }
-    }
-    getWalletAddress()
-  }, [])
 
   useEffect(() => {
     if (walletAddress) {

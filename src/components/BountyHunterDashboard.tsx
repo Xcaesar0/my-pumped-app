@@ -46,12 +46,14 @@ import ReferralCodeInput from './ReferralCodeInput'
 import TelegramIcon from './icons/TelegramIcon'
 import XIcon from './icons/XIcon'
 import ProfileSettingsModal from './ProfileSettingsModal'
+import { useAccount } from 'wagmi'
 
 interface BountyHunterDashboardProps {
   user: User
 }
 
 const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) => {
+  const { address, isConnected } = useAccount();
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [showConnectionModal, setShowConnectionModal] = useState<'telegram' | 'x' | null>(null)
   const [copiedReferral, setCopiedReferral] = useState(false)
@@ -66,7 +68,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     beginTask,
     verifyTask,
     isAuthenticated
-  } = useBountyData()
+  } = useBountyData(address ? address.toLowerCase() : null)
 
   const { getConnectionByPlatform, loading: connectionsLoading } = useSocialConnections(user.id)
   const { referralStatus, loading: referralLoading, refreshReferralStatus } = useReferralStatus(user.id)
