@@ -211,9 +211,33 @@ export const useBountyData = () => {
 
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
 
-      // Get completed tasks from localStorage to persist across sessions
-      const completedTasksKey = `completed_tasks_${userId}`
-      const completedTaskIds = JSON.parse(localStorage.getItem(completedTasksKey) || '[]')
+      // Fetch completed non-X tasks from user_task_submissions
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('user_task_submissions')
+        .select('admin_task_id, status')
+        .eq('user_id', userId)
+        .eq('status', 'approved');
+      if (submissionsError) {
+        console.error('Error loading user task submissions:', submissionsError);
+      }
+
+      // Fetch all admin tasks to map admin_task_id to title/platform
+      const { data: adminTasks, error: adminTasksError } = await supabase
+        .from('admin_tasks')
+        .select('id, title, platform');
+      if (adminTasksError) {
+        console.error('Error loading admin tasks:', adminTasksError);
+      }
+
+      // Fetch completed X tasks from x_task_completions
+      const { data: xCompletions, error: xCompletionsError } = await supabase
+        .from('x_task_completions')
+        .select('task_title')
+        .eq('user_id', userId);
+      if (xCompletionsError) {
+        console.error('Error loading x_task_completions:', xCompletionsError);
+      }
+      const completedXTaskTitles = xCompletions?.map(x => x.task_title) || [];
 
       // Define available tasks
       const allTasks: BountyTask[] = [
@@ -250,32 +274,35 @@ export const useBountyData = () => {
           verification_type: 'manual',
           requires_connection: true
         }
-      ]
+      ];
 
-      // Update task statuses based on user's connections and completion
+      // Map admin_task_id to title/platform for non-X tasks
+      const completedNonXTaskIds = submissions?.map(sub => sub.admin_task_id) || [];
+      const completedNonXTasks = adminTasks?.filter(
+        at => completedNonXTaskIds.includes(at.id) && at.platform !== 'x'
+      ) || [];
+
+      // Update task statuses based on DB completions and user's connections
       const updatedTasks = allTasks.map(task => {
-        // Check if task is completed (from localStorage or social connections)
-        if (completedTaskIds.includes(task.id)) {
-          return { ...task, status: 'completed' as const }
+        // Completed X tasks
+        if (task.platform === 'x' && completedXTaskTitles.includes(task.title)) {
+          return { ...task, status: 'completed' as const };
         }
-        
-        // Check if user has required connection for auto-completion
+        // Completed non-X tasks
+        if (task.platform !== 'x' && completedNonXTasks.some(at => at.title === task.title && at.platform === task.platform)) {
+          return { ...task, status: 'completed' as const };
+        }
+        // Check if user has required connection for auto-completion (legacy)
         if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
-          return { ...task, status: 'completed' as const }
+          return { ...task, status: 'completed' as const };
         }
-        
-        // X tasks are disabled - don't auto-complete them
-        // if (task.platform === 'x' && connectedPlatforms.includes('x')) {
-        //   return { ...task, status: 'completed' as const }
-        // }
-        
-        return task
-      })
+        return task;
+      });
 
       setBountyTasks({
         active: updatedTasks.filter(task => task.status !== 'completed'),
         completed: updatedTasks.filter(task => task.status === 'completed')
-      })
+      });
     } catch (error) {
       console.error('Error loading bounty tasks:', error)
       throw error
