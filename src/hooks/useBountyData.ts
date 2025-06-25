@@ -202,7 +202,30 @@ export const useBountyData = () => {
     }
 
     try {
-      // Check user's social connections
+      // 1. Fetch all admin_tasks
+      const { data: adminTasks, error: adminTasksError } = await supabase
+        .from('admin_tasks')
+        .select('*')
+        .eq('is_active', true)
+
+      if (adminTasksError) {
+        throw adminTasksError
+      }
+
+      // 2. Fetch completed user_task_submissions for this user
+      const { data: submissions, error: submissionsError } = await supabase
+        .from('user_task_submissions')
+        .select('admin_task_id')
+        .eq('user_id', userId)
+        .eq('status', 'approved')
+
+      if (submissionsError) {
+        throw submissionsError
+      }
+
+      const completedAdminTaskIds = (submissions || []).map(s => s.admin_task_id)
+
+      // 3. Check user's social connections (for connection requirements)
       const { data: socialConnections } = await supabase
         .from('social_connections')
         .select('platform')
@@ -211,70 +234,28 @@ export const useBountyData = () => {
 
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
 
-      // Get completed tasks from localStorage to persist across sessions
-      const completedTasksKey = `completed_tasks_${userId}`
-      const completedTaskIds = JSON.parse(localStorage.getItem(completedTasksKey) || '[]')
-
-      // Define available tasks
-      const allTasks: BountyTask[] = [
-        {
-          id: 'join_telegram',
-          title: 'Join Telegram',
-          description: 'Join our official Telegram community',
-          platform: 'telegram',
-          points: 25, // Updated to match new point system
-          status: 'not_started',
-          action_url: 'https://t.me/pumpeddotfun',
-          verification_type: 'manual',
-          requires_connection: true
-        },
-        {
-          id: 'follow_x',
-          title: 'Follow @pumpeddotfun',
-          description: 'Follow @pumpeddotfun on X (Twitter)',
-          platform: 'x',
-          points: 25, // Updated to match new point system
-          status: 'not_started',
-          action_url: 'https://x.com/pumpeddotfun',
-          verification_type: 'manual',
-          requires_connection: true
-        },
-        {
-          id: 'repost_launch',
-          title: 'Repost Launch Post',
-          description: 'Repost our latest launch announcement',
-          platform: 'x',
-          points: 50, // Bonus task
-          status: 'not_started',
-          action_url: 'https://x.com/pumpeddotfun/status/123456789',
-          verification_type: 'manual',
-          requires_connection: true
+      // 4. Build allTasks from adminTasks
+      const allTasks: BountyTask[] = (adminTasks || []).map((task: any) => {
+        const isCompleted = completedAdminTaskIds.includes(task.id)
+        return {
+          id: task.title.replace(/\s+/g, '_').toLowerCase(), // fallback id for frontend
+          title: task.title,
+          description: task.description,
+          platform: task.platform,
+          points: task.points,
+          status: isCompleted ? 'completed' : 'not_started',
+          action_url: task.action_url,
+          verification_type: task.verification_type,
+          requires_connection: task.requires_connection
         }
-      ]
-
-      // Update task statuses based on user's connections and completion
-      const updatedTasks = allTasks.map(task => {
-        // Check if task is completed (from localStorage or social connections)
-        if (completedTaskIds.includes(task.id)) {
-          return { ...task, status: 'completed' as const }
-        }
-        
-        // Check if user has required connection for auto-completion
-        if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
-          return { ...task, status: 'completed' as const }
-        }
-        
-        // X tasks are disabled - don't auto-complete them
-        // if (task.platform === 'x' && connectedPlatforms.includes('x')) {
-        //   return { ...task, status: 'completed' as const }
-        // }
-        
-        return task
       })
 
+      // 5. Update task statuses based on user's connections (for auto-completion, if needed)
+      // (Optional: If you want to auto-complete Telegram tasks when connected, you can add logic here)
+
       setBountyTasks({
-        active: updatedTasks.filter(task => task.status !== 'completed'),
-        completed: updatedTasks.filter(task => task.status === 'completed')
+        active: allTasks.filter(task => task.status !== 'completed'),
+        completed: allTasks.filter(task => task.status === 'completed')
       })
     } catch (error) {
       console.error('Error loading bounty tasks:', error)
