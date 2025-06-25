@@ -55,7 +55,7 @@ export const useBountyData = () => {
       }
     });
 
-    // Also check immediately in case already logged in
+    // Immediately check if already logged in
     supabase.auth.getUser().then(({ data: { user } }) => {
       if (user?.id) setUserId(user.id)
     });
