@@ -46,16 +46,24 @@ export const useBountyData = () => {
   const [userId, setUserId] = useState<string | null>(null)
 
   useEffect(() => {
-    const fetchUserId = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user?.id) {
-        setUserId(user.id)
+    // Subscribe to auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.id) {
+        setUserId(session.user.id)
       } else {
         setUserId(null)
       }
-    }
-    fetchUserId()
-  }, [])
+    });
+
+    // Also check immediately in case already logged in
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      if (user?.id) setUserId(user.id)
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (userId) {
