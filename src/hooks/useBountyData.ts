@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { supabase, User, getLeaderboard } from '../lib/supabase'
+import { supabase } from '../lib/supabase'
 
 export interface UserStats {
   totalReferrals: number
