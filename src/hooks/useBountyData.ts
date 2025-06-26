@@ -404,7 +404,7 @@ export const useBountyData = (walletAddress: string | null) => {
       }));
 
       const { error: pointsError } = await supabase.rpc('increment_user_points', {
-        wallet_address_param: walletAddress,
+        user_id_param: userId,
         points_to_add: task.points
       });
 
