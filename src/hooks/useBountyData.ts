@@ -336,7 +336,7 @@ export const useBountyData = (walletAddress: string | null) => {
     }
   }
 
-  const verifyTask = async (taskId: string) => {
+  const verifyTask = async (taskId: string, xUsername?: string) => {
     try {
       const task = bountyTasks.active.find(t => t.id === taskId)
       if (!task) return
@@ -348,131 +348,81 @@ export const useBountyData = (walletAddress: string | null) => {
         )
       }))
 
-      if (task.platform === 'x') {
-        // 1. Fetch user info (username) and X username
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('username')
-          .eq('wallet_address', walletAddress)
-          .single();
-
-        if (userError || !userData) {
-          setBountyTasks(prev => ({
-            ...prev,
-            active: prev.active.map(task =>
-              task.id === taskId ? { ...task, status: 'in_progress' } : task
-            )
-          }));
-          return { success: false, message: 'Could not verify X task. Please try again.' };
-        }
-
-        // 2. Insert into x_task_completions
-        const { error: xTaskError } = await supabase
-          .from('x_task_completions')
-          .insert([
-            {
-              wallet_address: walletAddress,
-              username: userData.username,
-              task_title: task.title
-            }
-          ]);
-
-        if (xTaskError) {
-          setBountyTasks(prev => ({
-            ...prev,
-            active: prev.active.map(task =>
-              task.id === taskId ? { ...task, status: 'in_progress' } : task
-            )
-          }));
-          return { success: false, message: 'Could not verify X task. Please try again.' };
-        }
-
-        // 3. Mark as completed in UI and award points (as before)
+      // 1. Fetch user info (username) and user_id
+      if (!userId) {
         setBountyTasks(prev => ({
-          active: prev.active.filter(t => t.id !== taskId),
-          completed: [...prev.completed, { ...task, status: 'completed' }]
+          ...prev,
+          active: prev.active.map(task =>
+            task.id === taskId ? { ...task, status: 'in_progress' } : task
+          )
         }));
-
-        const { error: pointsError } = await supabase.rpc('increment_user_points', {
-          wallet_address_param: walletAddress,
-          points_to_add: task.points
-        });
-
-        if (pointsError) {
-          console.warn('Failed to award points:', pointsError);
-        }
-
-        await loadUserStats();
-        return { success: true, message: 'Task completed! You earned points.' };
+        return { success: false, message: 'User not found.' };
       }
-
-      // --- Non-X tasks: existing logic ---
-      // 1. Fetch the admin_task_id from Supabase
-      const { data: adminTask, error: adminTaskError } = await supabase
-        .from('admin_tasks')
-        .select('id')
-        .eq('title', task.title)
-        .eq('platform', task.platform)
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('username')
+        .eq('id', userId)
         .single();
 
-      if (adminTaskError || !adminTask) {
-        console.warn('Could not find admin_task_id for task:', adminTaskError)
+      if (userError || !userData) {
         setBountyTasks(prev => ({
           ...prev,
           active: prev.active.map(task =>
             task.id === taskId ? { ...task, status: 'in_progress' } : task
           )
-        }))
-        return { success: false, message: 'Could not verify task. Please try again.' }
+        }));
+        return { success: false, message: 'Could not verify X task. Please try again.' };
       }
 
-      // 2. Insert into user_task_submissions
-      const { error: submissionError } = await supabase
-        .from('user_task_submissions')
+      // 2. Insert into x_task_completions
+      const { error: xTaskError } = await supabase
+        .from('x_task_completions')
         .insert([
           {
-            wallet_address: walletAddress,
-            admin_task_id: adminTask.id,
-            status: 'approved'
+            user_id: userId,
+            username: userData.username,
+            x_username: xUsername || 'unknown', // You may want to fetch the real X username
+            task_title: task.title,
+            completed_at: new Date().toISOString()
           }
-        ])
+        ]);
 
-      if (submissionError) {
-        console.warn('Failed to record task completion:', submissionError)
+      if (xTaskError) {
         setBountyTasks(prev => ({
           ...prev,
           active: prev.active.map(task =>
             task.id === taskId ? { ...task, status: 'in_progress' } : task
           )
-        }))
-        return { success: false, message: 'Could not verify task. Please try again.' }
+        }));
+        return { success: false, message: 'Could not verify X task. Please try again.' };
       }
 
-      // 3. Mark as completed in UI and award points
+      // 3. Mark as completed in UI and award points (as before)
       setBountyTasks(prev => ({
         active: prev.active.filter(t => t.id !== taskId),
         completed: [...prev.completed, { ...task, status: 'completed' }]
-      }))
+      }));
 
       const { error: pointsError } = await supabase.rpc('increment_user_points', {
         wallet_address_param: walletAddress,
         points_to_add: task.points
-      })
+      });
 
       if (pointsError) {
-        console.warn('Failed to award points:', pointsError)
+        console.warn('Failed to award points:', pointsError);
       }
 
-      await loadUserStats()
-      return { success: true, message: 'Task completed! You earned points.' }
+      await loadUserStats();
+      return { success: true, message: 'Task completed! You earned points.' };
     } catch (error) {
-      console.error('Error verifying task:', error)
+      console.error('Error verifying task:', error);
       setBountyTasks(prev => ({
         ...prev,
         active: prev.active.map(task =>
           task.id === taskId ? { ...task, status: 'in_progress' } : task
         )
-      }))
+      }));
+      return { success: false, message: 'An error occurred.' };
     }
   }
 
