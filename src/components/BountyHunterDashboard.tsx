@@ -123,7 +123,7 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
       const xConnection = getConnectionByPlatform('x')
       const xUsername = xConnection?.platform_username || 'unknown'
       
-      const result = await verifyTask(taskId)
+      const result = await verifyTask(taskId, xUsername)
       
       // Show completion message for completed tasks
       if (result?.success) {

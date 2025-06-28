@@ -363,7 +363,7 @@ export const useBountyData = (walletAddress: string | null) => {
     }
   }
 
-  const verifyTask = async (taskId: string) => {
+  const verifyTask = async (taskId: string, xUsername?: string) => {
     try {
       const task = bountyTasks.active.find(t => t.id === taskId)
       if (!task) return { success: false, message: 'Task not found' }
@@ -415,8 +415,8 @@ export const useBountyData = (walletAddress: string | null) => {
         console.error('Error fetching X connection:', xConnectionError)
       }
 
-      const xUsername = xConnection?.platform_username || 'unknown'
-      console.log('X username for task completion:', xUsername)
+      const xUsernameToUse = xUsername || xConnection?.platform_username || 'unknown'
+      console.log('X username for task completion:', xUsernameToUse)
 
       // 2. Insert into x_task_completions
       const { error: xTaskError } = await supabase
@@ -425,7 +425,7 @@ export const useBountyData = (walletAddress: string | null) => {
           {
             user_id: userId,
             username: userData.username,
-            x_username: xUsername,
+            x_username: xUsernameToUse,
             task_title: task.title,
             completed_at: new Date().toISOString()
           }
