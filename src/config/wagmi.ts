@@ -27,5 +27,4 @@ export const config = defaultWagmiConfig({
   chains,
   projectId: effectiveProjectId,
   metadata,
-  // Removed custom transports - let Web3Modal handle RPC connections automatically
 })
