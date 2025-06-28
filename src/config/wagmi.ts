@@ -1,5 +1,6 @@
 import { defaultWagmiConfig } from '@web3modal/wagmi/react/config'
 import { mainnet, arbitrum, polygon } from 'wagmi/chains'
+import { http } from 'wagmi'
 
 // Get projectId from environment variables
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
@@ -27,10 +28,10 @@ export const config = defaultWagmiConfig({
   chains,
   projectId: effectiveProjectId,
   metadata,
-  // Add custom RPC endpoints to avoid WalletConnect RPC issues
+  // Add custom RPC endpoints using http transport functions
   transports: {
-    [mainnet.id]: 'https://eth-mainnet.g.alchemy.com/v2/demo',
-    [arbitrum.id]: 'https://arb-mainnet.g.alchemy.com/v2/demo',
-    [polygon.id]: 'https://polygon-mainnet.g.alchemy.com/v2/demo',
+    [mainnet.id]: http('https://eth-mainnet.g.alchemy.com/v2/demo'),
+    [arbitrum.id]: http('https://arb-mainnet.g.alchemy.com/v2/demo'),
+    [polygon.id]: http('https://polygon-mainnet.g.alchemy.com/v2/demo'),
   }
 })
