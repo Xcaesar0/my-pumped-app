@@ -39,6 +39,7 @@ import {
 } from '../hooks/useBountyData'
 import { useSocialConnections } from '../hooks/useSocialConnections'
 import { useReferralStatus } from '../hooks/useReferralStatus'
+import { useTaskPersistence } from '../hooks/useTaskPersistence'
 import SocialConnectionModal from './SocialConnectionModal'
 import SocialConnectionRequiredModal from './SocialConnectionRequiredModal'
 import UserProfile from './UserProfile'
@@ -72,12 +73,20 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
 
   const { getConnectionByPlatform, loading: connectionsLoading } = useSocialConnections(user.id)
   const { referralStatus, loading: referralLoading, refreshReferralStatus } = useReferralStatus(user.id)
+  const { 
+    updateTaskStatus, 
+    markTaskCompleted, 
+    isTaskCompleted, 
+    getTaskStatus,
+    syncWithDatabase
+  } = useTaskPersistence(user.id)
 
   // Use the referral code from the user object - ensure it's properly displayed
   const referralCode = user.referral_code || 'LOADING...'
 
   useEffect(() => {
     refreshReferralStatus()
+    syncWithDatabase()
   }, [])
 
   const handleCopyReferral = async () => {
@@ -92,6 +101,10 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
 
   const handleTaskAction = async (taskId: string, platform?: 'telegram' | 'x' | 'general') => {
     const task = bountyTasks.active.find(t => t.id === taskId)
+    if (!task) return
+    
+    // Get current task status from persistence hook
+    const currentStatus = getTaskStatus(taskId)
     
     // Check if user has the required connection for this task
     if (task?.requires_connection && platform === 'telegram') {
@@ -116,18 +129,39 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     }
 
     // If task is not started, begin it
-    if (task?.status === 'not_started') {
+    if (currentStatus === 'not_started') {
+      // Update local status
+      await updateTaskStatus(taskId, 'in_progress')
+      
+      // Call the API to begin task
       await beginTask(taskId)
-    } else if (task?.status === 'in_progress') {
+    } else if (currentStatus === 'in_progress') {
       // Get X username from social connections for task verification
       const xConnection = getConnectionByPlatform('x')
       const xUsername = xConnection?.platform_username || 'unknown'
       
-      const result = await verifyTask(taskId, xUsername)
+      // Mark task as verifying in local storage
+      await updateTaskStatus(taskId, 'verifying')
       
-      // Show completion message for completed tasks
-      if (result?.success) {
+      // Call the API to verify task
+      const result = await markTaskCompleted(taskId, task.title, xUsername)
+      
+      if (result.success) {
+        // Update local status to completed
+        await updateTaskStatus(taskId, 'completed')
+        
+        // Show completion message
         setTaskCompletionMessage(`Task completed! You earned ${result.points || task.points} points.`)
+        setTimeout(() => setTaskCompletionMessage(null), 4000)
+        
+        // Refresh data to show updated points
+        refreshData()
+      } else {
+        // Revert to in_progress if verification failed
+        await updateTaskStatus(taskId, 'in_progress')
+        
+        // Show error message
+        setTaskCompletionMessage(result.message || 'Failed to verify task. Please try again.')
         setTimeout(() => setTaskCompletionMessage(null), 4000)
       }
     }
@@ -418,50 +452,56 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
                     </div>
                   ) : bountyTasks.active.length > 0 ? (
                     <div className="space-y-3 sm:space-y-4">
-                      {bountyTasks.active.map((task) => (
-                        <div
-                          key={task.id}
-                          className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}
-                        >
-                          <div className="flex items-start space-x-3">
-                            <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-800/50 flex items-center justify-center flex-shrink-0">
-                              {getTaskIcon(task)}
-                            </div>
-                            
-                            <div className="flex-1 min-w-0">
-                              <h3 className="text-sm font-semibold text-white mb-1">{task.title}</h3>
-                              <p className="text-xs text-gray-400 mb-3">{task.description}</p>
+                      {bountyTasks.active.map((task) => {
+                        // Get task status from persistence hook
+                        const persistedStatus = getTaskStatus(task.id)
+                        const effectiveStatus = persistedStatus !== 'not_started' ? persistedStatus : task.status
+                        
+                        return (
+                          <div
+                            key={task.id}
+                            className="p-3 sm:p-4 rounded-lg border border-gray-700/50" style={{ backgroundColor: '#262626' }}
+                          >
+                            <div className="flex items-start space-x-3">
+                              <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gray-800/50 flex items-center justify-center flex-shrink-0">
+                                {getTaskIcon(task)}
+                              </div>
                               
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2 sm:space-x-4">
-                                  <span className="text-xs text-gray-400">
-                                    {task.points} points
-                                  </span>
-                                  <span className="text-xs text-gray-400">
-                                    {task.platform === 'telegram' && 'Telegram'}
-                                    {task.platform === 'x' && 'X (Twitter)'}
-                                  </span>
-                                </div>
+                              <div className="flex-1 min-w-0">
+                                <h3 className="text-sm font-semibold text-white mb-1">{task.title}</h3>
+                                <p className="text-xs text-gray-400 mb-3">{task.description}</p>
                                 
-                                <button
-                                  onClick={() => handleTaskAction(task.id, task.platform)}
-                                  className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200 ${
-                                    task.status === 'not_started'
-                                      ? 'bg-green-600 hover:bg-green-700 text-white'
-                                      : task.status === 'verifying'
-                                      ? 'bg-gray-600 text-white cursor-not-allowed'
-                                      : 'bg-blue-600 hover:bg-blue-700 text-white'
-                                  }`}
-                                  disabled={task.status === 'verifying'}
-                                >
-                                  {task.status === 'not_started' ? 'Start' : 
-                                   task.status === 'verifying' ? 'Verifying...' : 'Verify'}
-                                </button>
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center space-x-2 sm:space-x-4">
+                                    <span className="text-xs text-gray-400">
+                                      {task.points} points
+                                    </span>
+                                    <span className="text-xs text-gray-400">
+                                      {task.platform === 'telegram' && 'Telegram'}
+                                      {task.platform === 'x' && 'X (Twitter)'}
+                                    </span>
+                                  </div>
+                                  
+                                  <button
+                                    onClick={() => handleTaskAction(task.id, task.platform)}
+                                    className={`px-2 sm:px-3 py-1 rounded-lg text-xs font-medium transition-colors duration-200 ${
+                                      effectiveStatus === 'not_started'
+                                        ? 'bg-green-600 hover:bg-green-700 text-white'
+                                        : effectiveStatus === 'verifying'
+                                        ? 'bg-gray-600 text-white cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 text-white'
+                                    }`}
+                                    disabled={effectiveStatus === 'verifying'}
+                                  >
+                                    {effectiveStatus === 'not_started' ? 'Start' : 
+                                     effectiveStatus === 'verifying' ? 'Verifying...' : 'Verify'}
+                                  </button>
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        )
+                      })}
                     </div>
                   ) : (
                     <div className="text-center py-8">
