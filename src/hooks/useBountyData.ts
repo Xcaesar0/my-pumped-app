@@ -51,15 +51,22 @@ export const useBountyData = (walletAddress: string | null) => {
         setUserId(null)
         return
       }
-      const { data: user, error } = await supabase
-        .from('users')
-        .select('id')
-        .eq('wallet_address', walletAddress)
-        .single();
-      if (user && user.id) {
-        setUserId(user.id);
-      } else {
-        setUserId(null);
+      
+      try {
+        const { data: user, error } = await supabase
+          .from('users')
+          .select('id')
+          .eq('wallet_address', walletAddress)
+          .single();
+          
+        if (user && user.id) {
+          setUserId(user.id);
+        } else {
+          setUserId(null);
+        }
+      } catch (error) {
+        console.error('Network error fetching user ID:', error)
+        setUserId(null)
       }
     };
     fetchUserId();
@@ -267,18 +274,25 @@ export const useBountyData = (walletAddress: string | null) => {
         // Continue execution even if this fails
       }
 
-      // Fetch completed X tasks from x_task_completions
-      const { data: xCompletions, error: xCompletionsError } = await supabase
-        .from('x_task_completions')
-        .select('task_title')
-        .eq('user_id', userId)
+      // Fetch completed X tasks from x_task_completions with error handling
+      let completedXTaskTitles: string[] = []
+      try {
+        const { data: xCompletions, error: xCompletionsError } = await supabase
+          .from('x_task_completions')
+          .select('task_title')
+          .eq('user_id', userId)
 
-      if (xCompletionsError) {
-        console.error('Error loading x_task_completions:', xCompletionsError)
+        if (xCompletionsError) {
+          console.error('Error loading x_task_completions:', xCompletionsError)
+          // Don't throw, just continue with empty array
+        } else {
+          completedXTaskTitles = xCompletions?.map(x => x.task_title) || []
+          console.log('Completed X task titles:', completedXTaskTitles)
+        }
+      } catch (error) {
+        console.error('Network error loading x_task_completions:', error)
+        // Continue with empty array
       }
-      
-      const completedXTaskTitles = xCompletions?.map(x => x.task_title) || []
-      console.log('Completed X task titles:', completedXTaskTitles)
 
       // Define available tasks
       const allTasks: BountyTask[] = [
@@ -340,7 +354,8 @@ export const useBountyData = (walletAddress: string | null) => {
       })
     } catch (error) {
       console.error('Error loading bounty tasks:', error)
-      throw error
+      // Don't throw here, just set empty tasks to prevent app crash
+      setBountyTasks({ active: [], completed: [] })
     }
   }
 
@@ -449,13 +464,17 @@ export const useBountyData = (walletAddress: string | null) => {
       }))
 
       // Award points to the user
-      const { error: pointsError } = await supabase.rpc('increment_user_points', {
-        user_id_param: userId,
-        points_to_add: task.points
-      })
+      try {
+        const { error: pointsError } = await supabase.rpc('increment_user_points', {
+          user_id_param: userId,
+          points_to_add: task.points
+        })
 
-      if (pointsError) {
-        console.error('Failed to award points:', pointsError)
+        if (pointsError) {
+          console.error('Failed to award points:', pointsError)
+        }
+      } catch (error) {
+        console.error('Network error awarding points:', error)
       }
 
       await loadUserStats()

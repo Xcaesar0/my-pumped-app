@@ -4,28 +4,35 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string
 
 // Check if environment variables are properly configured
-if (!supabaseUrl || !supabaseAnonKey) {
-  console.warn(`
-    Missing Supabase environment variables. 
+if (!supabaseUrl || !supabaseAnonKey || 
+    supabaseUrl === 'your_supabase_url_here' || 
+    supabaseAnonKey === 'your_supabase_anon_key_here') {
+  console.error(`
+    ❌ Supabase Configuration Required
     
-    Please set up your Supabase connection by:
-    1. Creating a .env file from .env.example
-    2. Adding your actual Supabase credentials:
-       - VITE_SUPABASE_URL=your_supabase_url
-       - VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
-    3. You can find these values in your Supabase project settings under 'API'
-    4. Restart your development server after updating the .env file
+    To fix database connection issues:
+    1. Go to your Supabase project dashboard
+    2. Navigate to Settings > API
+    3. Copy your Project URL and Anon Key
+    4. Update your .env file:
+       VITE_SUPABASE_URL=https://your-project.supabase.co
+       VITE_SUPABASE_ANON_KEY=your_actual_anon_key
+    5. Restart your development server
     
-    Using placeholder values for now to allow the app to load.
+    Current status: Database features will not work
   `)
 }
 
 // Use placeholder values if environment variables are not set
-const effectiveSupabaseUrl = supabaseUrl || 'https://placeholder.supabase.co'
-const effectiveSupabaseAnonKey = supabaseAnonKey || 'placeholder_key'
+const effectiveSupabaseUrl = (supabaseUrl && supabaseUrl !== 'your_supabase_url_here') 
+  ? supabaseUrl 
+  : 'https://placeholder.supabase.co'
+const effectiveSupabaseAnonKey = (supabaseAnonKey && supabaseAnonKey !== 'your_supabase_anon_key_here') 
+  ? supabaseAnonKey 
+  : 'placeholder_key'
 
 // Validate URL format only if we have a real URL
-if (supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co') {
+if (supabaseUrl && supabaseUrl !== 'your_supabase_url_here' && supabaseUrl !== 'https://placeholder.supabase.co') {
   try {
     new URL(supabaseUrl)
   } catch (error) {
@@ -39,7 +46,13 @@ if (supabaseUrl && supabaseUrl !== 'https://placeholder.supabase.co') {
 
 export const supabase = createClient(effectiveSupabaseUrl, effectiveSupabaseAnonKey)
 
-console.log('✅ Supabase client created successfully')
+// Only log success if we have real credentials
+if (supabaseUrl && supabaseUrl !== 'your_supabase_url_here' && 
+    supabaseAnonKey && supabaseAnonKey !== 'your_supabase_anon_key_here') {
+  console.log('✅ Supabase client created successfully')
+} else {
+  console.log('⚠️  Supabase client created with placeholder values')
+}
 
 export interface User {
   id: string
@@ -100,131 +113,171 @@ export interface Referral {
 
 // Social media integration functions (kept for UI purposes, but X connection disabled)
 export const getSocialConnections = async (userId: string): Promise<SocialConnection[]> => {
-  const { data, error } = await supabase
-    .from('social_connections')
-    .select('*')
-    .eq('user_id', userId)
-    .eq('is_active', true)
+  try {
+    const { data, error } = await supabase
+      .from('social_connections')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('is_active', true)
 
-  if (error) {
-    console.error('Error fetching social connections:', error)
+    if (error) {
+      console.error('Error fetching social connections:', error)
+      return []
+    }
+
+    return data || []
+  } catch (error) {
+    console.error('Network error fetching social connections:', error)
     return []
   }
-
-  return data || []
 }
 
 export const createSocialConnection = async (connection: Omit<SocialConnection, 'id' | 'connected_at'>): Promise<SocialConnection> => {
   console.log('Creating social connection:', connection)
   
-  const { data, error } = await supabase
-    .from('social_connections')
-    .upsert({
-      ...connection,
-      connected_at: new Date().toISOString()
-    }, {
-      onConflict: 'user_id,platform'
-    })
-    .select()
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('social_connections')
+      .upsert({
+        ...connection,
+        connected_at: new Date().toISOString()
+      }, {
+        onConflict: 'user_id,platform'
+      })
+      .select()
+      .single()
 
-  if (error) {
-    console.error('Error creating social connection:', error)
-    throw new Error(`Failed to create social connection: ${error.message}`)
+    if (error) {
+      console.error('Error creating social connection:', error)
+      throw new Error(`Failed to create social connection: ${error.message}`)
+    }
+
+    console.log('Social connection created successfully:', data)
+    return data
+  } catch (error) {
+    console.error('Network error creating social connection:', error)
+    throw new Error(`Failed to create social connection: ${error instanceof Error ? error.message : 'Network error'}`)
   }
-
-  console.log('Social connection created successfully:', data)
-  return data
 }
 
 export const updateSocialConnection = async (id: string, updates: Partial<SocialConnection>): Promise<SocialConnection> => {
-  const { data, error } = await supabase
-    .from('social_connections')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('social_connections')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single()
 
-  if (error) {
-    console.error('Error updating social connection:', error)
-    throw new Error(error.message)
+    if (error) {
+      console.error('Error updating social connection:', error)
+      throw new Error(error.message)
+    }
+
+    return data
+  } catch (error) {
+    console.error('Network error updating social connection:', error)
+    throw new Error(error instanceof Error ? error.message : 'Network error')
   }
-
-  return data
 }
 
 export const deleteSocialConnection = async (id: string): Promise<void> => {
-  const { error } = await supabase
-    .from('social_connections')
-    .delete()
-    .eq('id', id)
+  try {
+    const { error } = await supabase
+      .from('social_connections')
+      .delete()
+      .eq('id', id)
 
-  if (error) {
-    console.error('Error deleting social connection:', error)
-    throw new Error(error.message)
+    if (error) {
+      console.error('Error deleting social connection:', error)
+      throw new Error(error.message)
+    }
+  } catch (error) {
+    console.error('Network error deleting social connection:', error)
+    throw new Error(error instanceof Error ? error.message : 'Network error')
   }
 }
 
 // User functions
 export const getUserByUsername = async (username: string): Promise<User | null> => {
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('username', username)
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('username', username)
+      .single()
 
-  if (error && error.code !== 'PGRST116') throw error
-  return data
+    if (error && error.code !== 'PGRST116') throw error
+    return data
+  } catch (error) {
+    console.error('Network error fetching user by username:', error)
+    return null
+  }
 }
 
 export const getUserByReferralCode = async (referralCode: string): Promise<User | null> => {
   console.log('Searching for user with referral code:', referralCode)
   
-  // Clean the referral code to only contain A-Z and 0-9
-  const cleanCode = referralCode.toUpperCase().replace(/[^A-Z0-9]/g, '')
-  
-  const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('referral_code', cleanCode)
-    .maybeSingle()
+  try {
+    // Clean the referral code to only contain A-Z and 0-9
+    const cleanCode = referralCode.toUpperCase().replace(/[^A-Z0-9]/g, '')
+    
+    const { data, error } = await supabase
+      .from('users')
+      .select('*')
+      .eq('referral_code', cleanCode)
+      .maybeSingle()
 
-  if (error) {
-    console.error('Error finding user by referral code:', error)
-    throw error
+    if (error) {
+      console.error('Error finding user by referral code:', error)
+      throw error
+    }
+    
+    console.log('Found user by referral code:', data?.username || 'none')
+    return data
+  } catch (error) {
+    console.error('Network error finding user by referral code:', error)
+    return null
   }
-  
-  console.log('Found user by referral code:', data?.username || 'none')
-  return data
 }
 
 // Referral system functions
 export const createReferral = async (referrerId: string, referredId: string, referralCode: string): Promise<Referral> => {
-  const { data, error } = await supabase
-    .from('referrals')
-    .insert([{
-      referrer_id: referrerId,
-      referred_id: referredId,
-      referral_code: referralCode,
-      points_awarded: 10,
-      status: 'pending'
-    }])
-    .select()
-    .single()
+  try {
+    const { data, error } = await supabase
+      .from('referrals')
+      .insert([{
+        referrer_id: referrerId,
+        referred_id: referredId,
+        referral_code: referralCode,
+        points_awarded: 10,
+        status: 'pending'
+      }])
+      .select()
+      .single()
 
-  if (error) throw error
-  return data
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('Network error creating referral:', error)
+    throw error
+  }
 }
 
 export const getReferralByUserId = async (userId: string): Promise<Referral | null> => {
-  const { data, error } = await supabase
-    .from('referrals')
-    .select('*, referrer:users!referrer_id(username)')
-    .eq('referred_id', userId)
-    .maybeSingle()
+  try {
+    const { data, error } = await supabase
+      .from('referrals')
+      .select('*, referrer:users!referrer_id(username)')
+      .eq('referred_id', userId)
+      .maybeSingle()
 
-  if (error) throw error
-  return data
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('Network error fetching referral by user ID:', error)
+    return null
+  }
 }
 
 // Process referral from code with proper error handling
@@ -263,7 +316,7 @@ export const processReferralFromCode = async (referralCode: string, newUserId: s
     // Return the data as-is since it should be a JSON object
     return data as { success: boolean; error?: string; referral_id?: string; message?: string }
   } catch (error) {
-    console.error('Error processing referral from code:', error)
+    console.error('Network error processing referral from code:', error)
     return { 
       success: false, 
       error: error instanceof Error ? error.message : 'Failed to process referral code' 
@@ -283,31 +336,41 @@ export const validateReferralCode = (code: string): boolean => {
 
 // Referral tracking functions
 export const trackReferralClick = async (referralCode: string, ipAddress?: string, userAgent?: string): Promise<string | null> => {
-  const { data, error } = await supabase.rpc('track_referral_click', {
-    referral_code_param: referralCode,
-    ip_address_param: ipAddress,
-    user_agent_param: userAgent
-  })
+  try {
+    const { data, error } = await supabase.rpc('track_referral_click', {
+      referral_code_param: referralCode,
+      ip_address_param: ipAddress,
+      user_agent_param: userAgent
+    })
 
-  if (error) throw error
-  return data
+    if (error) throw error
+    return data
+  } catch (error) {
+    console.error('Network error tracking referral click:', error)
+    return null
+  }
 }
 
 // Leaderboard functions
 export const getLeaderboard = async (limit: number = 100): Promise<LeaderboardEntry[]> => {
-  const { data, error } = await supabase
-    .from('users')
-    .select('username, current_points')
-    .order('current_points', { ascending: false })
-    .limit(limit)
+  try {
+    const { data, error } = await supabase
+      .from('users')
+      .select('username, current_points')
+      .order('current_points', { ascending: false })
+      .limit(limit)
 
-  if (error) throw error
-  
-  return (data || []).map((user, index) => ({
-    username: user.username,
-    points: user.current_points,
-    rank: index + 1
-  }))
+    if (error) throw error
+    
+    return (data || []).map((user, index) => ({
+      username: user.username,
+      points: user.current_points,
+      rank: index + 1
+    }))
+  } catch (error) {
+    console.error('Network error fetching leaderboard:', error)
+    return []
+  }
 }
 
 export const getReferralLeaderboard = async (limit: number = 100): Promise<LeaderboardEntry[]> => {
@@ -349,26 +412,31 @@ export const getReferralLeaderboard = async (limit: number = 100): Promise<Leade
 
     return data || []
   } catch (error) {
-    console.error('Error loading referral leaderboard:', error)
+    console.error('Network error loading referral leaderboard:', error)
     return []
   }
 }
 
 export const getUserRank = async (userId: string): Promise<number> => {
-  const { data: user } = await supabase
-    .from('users')
-    .select('current_points')
-    .eq('id', userId)
-    .single()
+  try {
+    const { data: user } = await supabase
+      .from('users')
+      .select('current_points')
+      .eq('id', userId)
+      .single()
 
-  if (!user) return 0
+    if (!user) return 0
 
-  const { count } = await supabase
-    .from('users')
-    .select('*', { count: 'exact', head: true })
-    .gt('current_points', user.current_points)
+    const { count } = await supabase
+      .from('users')
+      .select('*', { count: 'exact', head: true })
+      .gt('current_points', user.current_points)
 
-  return (count || 0) + 1
+    return (count || 0) + 1
+  } catch (error) {
+    console.error('Network error fetching user rank:', error)
+    return 0
+  }
 }
 
 export const generateReferralCode = (userId: string): string => {
@@ -386,20 +454,30 @@ export const generateReferralCode = (userId: string): string => {
 
 // Task functions
 export const getUserTasks = async (userId: string): Promise<Task[]> => {
-  const { data, error } = await supabase
-    .from('user_tasks')
-    .select('*')
-    .eq('user_id', userId)
-    .order('created_at', { ascending: true })
+  try {
+    const { data, error } = await supabase
+      .from('user_tasks')
+      .select('*')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: true })
 
-  if (error) throw error
-  return data || []
+    if (error) throw error
+    return data || []
+  } catch (error) {
+    console.error('Network error fetching user tasks:', error)
+    return []
+  }
 }
 
 export const updateTaskProgress = async (userId: string): Promise<void> => {
-  const { error } = await supabase.rpc('update_task_progress', {
-    user_id_param: userId
-  })
+  try {
+    const { error } = await supabase.rpc('update_task_progress', {
+      user_id_param: userId
+    })
 
-  if (error) throw error
+    if (error) throw error
+  } catch (error) {
+    console.error('Network error updating task progress:', error)
+    throw error
+  }
 }

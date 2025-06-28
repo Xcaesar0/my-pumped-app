@@ -5,7 +5,19 @@ import { mainnet, arbitrum, polygon } from 'wagmi/chains'
 const projectId = import.meta.env.VITE_WALLETCONNECT_PROJECT_ID
 
 if (!projectId || projectId === 'your_project_id_here') {
-  console.warn('WalletConnect Project ID is not configured. Please visit https://cloud.walletconnect.com to get your Project ID and update your .env file.')
+  console.warn(`
+    ⚠️  WalletConnect Project ID Configuration Required
+    
+    To fix wallet connection issues:
+    1. Visit https://cloud.walletconnect.com
+    2. Create a new project or use an existing one
+    3. Copy your Project ID
+    4. Update your .env file:
+       VITE_WALLETCONNECT_PROJECT_ID=your_actual_project_id
+    5. Restart your development server
+    
+    Current status: Using fallback configuration (limited functionality)
+  `)
 }
 
 // Create wagmiConfig
