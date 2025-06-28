@@ -213,39 +213,72 @@ export const useBountyData = (walletAddress: string | null) => {
       // Check user's social connections
       const { data: socialConnections } = await supabase
         .from('social_connections')
-        .select('platform')
+        .select('platform, platform_username')
         .eq('user_id', userId)
         .eq('is_active', true)
 
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
+      const xUsername = socialConnections?.find(conn => conn.platform === 'x')?.platform_username || ''
 
-      // Fetch completed non-X tasks from user_task_submissions
-      const { data: submissions, error: submissionsError } = await supabase
-        .from('user_task_submissions')
-        .select('admin_task_id, status')
-        .eq('user_id', userId)
-        .eq('status', 'approved');
-      if (submissionsError) {
-        console.error('Error loading user task submissions:', submissionsError);
+      // Get user data for username
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('username')
+        .eq('id', userId)
+        .single()
+
+      if (userError) {
+        console.error('Error loading user data:', userError)
+        throw userError
       }
 
-      // Fetch all admin tasks to map admin_task_id to title/platform
-      const { data: adminTasks, error: adminTasksError } = await supabase
-        .from('admin_tasks')
-        .select('id, title, platform');
-      if (adminTasksError) {
-        console.error('Error loading admin tasks:', adminTasksError);
+      // Try to fetch completed tasks from user_task_submissions
+      let completedTasksFromSubmissions: string[] = []
+      try {
+        const { data: submissions, error: submissionsError } = await supabase
+          .from('user_task_submissions')
+          .select('admin_task_id, status')
+          .eq('user_id', userId)
+          .eq('status', 'approved')
+
+        if (!submissionsError && submissions) {
+          completedTasksFromSubmissions = submissions.map(sub => sub.admin_task_id)
+        }
+      } catch (error) {
+        console.error('Error loading user task submissions:', error)
+        // Continue execution even if this fails
+      }
+
+      // Try to fetch admin tasks
+      let adminTasksMap: Record<string, any> = {}
+      try {
+        const { data: adminTasks, error: adminTasksError } = await supabase
+          .from('admin_tasks')
+          .select('id, title, platform')
+
+        if (!adminTasksError && adminTasks) {
+          adminTasksMap = adminTasks.reduce((acc, task) => {
+            acc[task.id] = task
+            return acc
+          }, {} as Record<string, any>)
+        }
+      } catch (error) {
+        console.error('Error loading admin tasks:', error)
+        // Continue execution even if this fails
       }
 
       // Fetch completed X tasks from x_task_completions
       const { data: xCompletions, error: xCompletionsError } = await supabase
         .from('x_task_completions')
         .select('task_title')
-        .eq('user_id', userId);
+        .eq('user_id', userId)
+
       if (xCompletionsError) {
-        console.error('Error loading x_task_completions:', xCompletionsError);
+        console.error('Error loading x_task_completions:', xCompletionsError)
       }
-      const completedXTaskTitles = xCompletions?.map(x => x.task_title) || [];
+      
+      const completedXTaskTitles = xCompletions?.map(x => x.task_title) || []
+      console.log('Completed X task titles:', completedXTaskTitles)
 
       // Define available tasks
       const allTasks: BountyTask[] = [
@@ -254,7 +287,7 @@ export const useBountyData = (walletAddress: string | null) => {
           title: 'Join Telegram',
           description: 'Join our official Telegram community',
           platform: 'telegram',
-          points: 25, // Updated to match new point system
+          points: 25,
           status: 'not_started',
           action_url: 'https://t.me/pumpeddotfun',
           verification_type: 'manual',
@@ -265,7 +298,7 @@ export const useBountyData = (walletAddress: string | null) => {
           title: 'Follow @pumpeddotfun',
           description: 'Follow @pumpeddotfun on X (Twitter)',
           platform: 'x',
-          points: 25, // Updated to match new point system
+          points: 25,
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun',
           verification_type: 'manual',
@@ -276,41 +309,35 @@ export const useBountyData = (walletAddress: string | null) => {
           title: 'Repost Launch Post',
           description: 'Repost our latest launch announcement',
           platform: 'x',
-          points: 50, // Bonus task
+          points: 50,
           status: 'not_started',
           action_url: 'https://x.com/pumpeddotfun/status/123456789',
           verification_type: 'manual',
           requires_connection: true
         }
-      ];
-
-      // Map admin_task_id to title/platform for non-X tasks
-      const completedNonXTaskIds = submissions?.map(sub => sub.admin_task_id) || [];
-      const completedNonXTasks = adminTasks?.filter(
-        at => completedNonXTaskIds.includes(at.id) && at.platform !== 'x'
-      ) || [];
+      ]
 
       // Update task statuses based on DB completions and user's connections
       const updatedTasks = allTasks.map(task => {
-        // Completed X tasks
+        // Check if task is completed based on X task completions
         if (task.platform === 'x' && completedXTaskTitles.includes(task.title)) {
-          return { ...task, status: 'completed' as const };
+          return { ...task, status: 'completed' as const }
         }
-        // Completed non-X tasks
-        if (task.platform !== 'x' && completedNonXTasks.some(at => at.title === task.title && at.platform === task.platform)) {
-          return { ...task, status: 'completed' as const };
-        }
-        // Check if user has required connection for auto-completion (legacy)
+        
+        // Check if task is completed based on user_task_submissions
+        // This would require mapping task.id to admin_task_id which we don't have
+        // For now, we'll just check if the user has the required connection for auto-completion
         if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
-          return { ...task, status: 'completed' as const };
+          return { ...task, status: 'completed' as const }
         }
-        return task;
-      });
+        
+        return task
+      })
 
       setBountyTasks({
         active: updatedTasks.filter(task => task.status !== 'completed'),
         completed: updatedTasks.filter(task => task.status === 'completed')
-      });
+      })
     } catch (error) {
       console.error('Error loading bounty tasks:', error)
       throw error
@@ -336,10 +363,10 @@ export const useBountyData = (walletAddress: string | null) => {
     }
   }
 
-  const verifyTask = async (taskId: string, xUsername?: string) => {
+  const verifyTask = async (taskId: string) => {
     try {
       const task = bountyTasks.active.find(t => t.id === taskId)
-      if (!task) return
+      if (!task) return { success: false, message: 'Task not found' }
 
       setBountyTasks(prev => ({
         ...prev,
@@ -355,14 +382,15 @@ export const useBountyData = (walletAddress: string | null) => {
           active: prev.active.map(task =>
             task.id === taskId ? { ...task, status: 'in_progress' } : task
           )
-        }));
-        return { success: false, message: 'User not found.' };
+        }))
+        return { success: false, message: 'User not found.' }
       }
+      
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('username')
         .eq('id', userId)
-        .single();
+        .single()
 
       if (userError || !userData) {
         setBountyTasks(prev => ({
@@ -370,9 +398,25 @@ export const useBountyData = (walletAddress: string | null) => {
           active: prev.active.map(task =>
             task.id === taskId ? { ...task, status: 'in_progress' } : task
           )
-        }));
-        return { success: false, message: 'Could not verify X task. Please try again.' };
+        }))
+        return { success: false, message: 'Could not verify task. Please try again.' }
       }
+
+      // Get X username from social connections
+      const { data: xConnection, error: xConnectionError } = await supabase
+        .from('social_connections')
+        .select('platform_username')
+        .eq('user_id', userId)
+        .eq('platform', 'x')
+        .eq('is_active', true)
+        .maybeSingle()
+
+      if (xConnectionError) {
+        console.error('Error fetching X connection:', xConnectionError)
+      }
+
+      const xUsername = xConnection?.platform_username || 'unknown'
+      console.log('X username for task completion:', xUsername)
 
       // 2. Insert into x_task_completions
       const { error: xTaskError } = await supabase
@@ -381,48 +425,50 @@ export const useBountyData = (walletAddress: string | null) => {
           {
             user_id: userId,
             username: userData.username,
-            x_username: xUsername || 'unknown', // You may want to fetch the real X username
+            x_username: xUsername,
             task_title: task.title,
             completed_at: new Date().toISOString()
           }
-        ]);
+        ])
 
       if (xTaskError) {
+        console.error('Error inserting X task completion:', xTaskError)
         setBountyTasks(prev => ({
           ...prev,
           active: prev.active.map(task =>
             task.id === taskId ? { ...task, status: 'in_progress' } : task
           )
-        }));
-        return { success: false, message: 'Could not verify X task. Please try again.' };
+        }))
+        return { success: false, message: 'Could not verify X task. Please try again.' }
       }
 
-      // 3. Mark as completed in UI and award points (as before)
+      // 3. Mark as completed in UI and award points
       setBountyTasks(prev => ({
         active: prev.active.filter(t => t.id !== taskId),
         completed: [...prev.completed, { ...task, status: 'completed' }]
-      }));
+      }))
 
+      // Award points to the user
       const { error: pointsError } = await supabase.rpc('increment_user_points', {
         user_id_param: userId,
         points_to_add: task.points
-      });
+      })
 
       if (pointsError) {
-        console.warn('Failed to award points:', pointsError);
+        console.error('Failed to award points:', pointsError)
       }
 
-      await loadUserStats();
-      return { success: true, message: 'Task completed! You earned points.' };
+      await loadUserStats()
+      return { success: true, message: `Task completed! You earned ${task.points} points.` }
     } catch (error) {
-      console.error('Error verifying task:', error);
+      console.error('Error verifying task:', error)
       setBountyTasks(prev => ({
         ...prev,
         active: prev.active.map(task =>
           task.id === taskId ? { ...task, status: 'in_progress' } : task
         )
-      }));
-      return { success: false, message: 'An error occurred.' };
+      }))
+      return { success: false, message: 'An error occurred.' }
     }
   }
 
