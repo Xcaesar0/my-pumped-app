@@ -155,10 +155,21 @@ export const useBountyData = (walletAddress: string | null) => {
         console.warn('Error fetching point awards:', pointsError)
       }
 
+      // Get point breakdown from points_transactions
+      const { data: pointTransactions, error: transactionsError } = await supabase
+        .from('points_transactions')
+        .select('transaction_type, amount')
+        .eq('user_id', userId)
+        
+      if (transactionsError) {
+        console.warn('Error fetching point transactions:', transactionsError)
+      }
+
       let pointsFromReferrals = 0
       let pointsFromSocial = 0
       let pointsFromChain = 0
 
+      // Process point awards
       pointAwards?.forEach(award => {
         if (award.award_type.includes('referral_code_entry') || award.award_type.includes('social_connection')) {
           pointsFromReferrals += award.points_awarded
@@ -166,6 +177,17 @@ export const useBountyData = (walletAddress: string | null) => {
           pointsFromSocial += award.points_awarded
         } else if (award.award_type.includes('chain_continuation') || award.award_type.includes('self_referral')) {
           pointsFromChain += award.points_awarded
+        }
+      })
+
+      // Process point transactions
+      pointTransactions?.forEach(transaction => {
+        if (transaction.transaction_type === 'referral_bonus') {
+          pointsFromReferrals += transaction.amount
+        } else if (transaction.transaction_type === 'social_linking') {
+          pointsFromSocial += transaction.amount
+        } else if (transaction.transaction_type === 'task_completion') {
+          pointsFromChain += transaction.amount
         }
       })
 
@@ -491,8 +513,8 @@ export const useBountyData = (walletAddress: string | null) => {
 
       // Use the process_x_task_completion function
       const { data: result, error: processError } = await supabase.rpc('process_x_task_completion', {
-        user_id_param: userId,
         task_title_param: task.title,
+        user_id_param: userId,
         x_username_param: xUsernameToUse
       })
 
