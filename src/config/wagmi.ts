@@ -27,4 +27,10 @@ export const config = defaultWagmiConfig({
   chains,
   projectId: effectiveProjectId,
   metadata,
+  // Add custom RPC endpoints to avoid WalletConnect RPC issues
+  transports: {
+    [mainnet.id]: 'https://eth-mainnet.g.alchemy.com/v2/demo',
+    [arbitrum.id]: 'https://arb-mainnet.g.alchemy.com/v2/demo',
+    [polygon.id]: 'https://polygon-mainnet.g.alchemy.com/v2/demo',
+  }
 })
