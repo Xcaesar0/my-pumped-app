@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { createWeb3Modal } from '@web3modal/wagmi/react'
 import { WagmiProvider } from 'wagmi'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
@@ -30,7 +30,19 @@ try {
 }
 
 if (!projectId || projectId === 'your_project_id_here') {
-  console.warn('WalletConnect Project ID is not configured. Wallet connection features may be limited. Please visit https://cloud.walletconnect.com to get your Project ID and update your .env file.')
+  console.warn(`
+    ⚠️  WalletConnect Project ID Configuration Required
+    
+    To fix wallet connection issues:
+    1. Visit https://cloud.walletconnect.com
+    2. Create a new project or use an existing one
+    3. Copy your Project ID
+    4. Update your .env file:
+       VITE_WALLETCONNECT_PROJECT_ID=your_actual_project_id
+    5. Restart your development server
+    
+    Current status: Using fallback configuration (limited functionality)
+  `)
 }
 
 // Create a client
@@ -48,6 +60,16 @@ function AppContent() {
 }
 
 function App() {
+  // Initialize localStorage for task persistence if not already set
+  useEffect(() => {
+    if (!localStorage.getItem('completedTasks')) {
+      localStorage.setItem('completedTasks', JSON.stringify([]))
+    }
+    if (!localStorage.getItem('taskStatuses')) {
+      localStorage.setItem('taskStatuses', JSON.stringify({}))
+    }
+  }, [])
+
   return (
     <WagmiProvider config={config}>
       <QueryClientProvider client={queryClient}>

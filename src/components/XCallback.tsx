@@ -20,6 +20,8 @@ export default function XCallback() {
           throw new Error('No access token received')
         }
 
+        console.log('Access token received, setting session...')
+
         // Set the session
         const { error: sessionError } = await supabase.auth.setSession({
           access_token: accessToken,
@@ -27,26 +29,55 @@ export default function XCallback() {
         })
 
         if (sessionError) {
+          console.error('Session error:', sessionError)
           throw sessionError
         }
+
+        console.log('Session set, getting current session...')
 
         // Get session to verify Twitter connection
         const { data: { session }, error: getSessionError } = await supabase.auth.getSession()
         
         if (getSessionError) {
+          console.error('Get session error:', getSessionError)
           throw getSessionError
         }
 
         if (!session?.user?.identities?.some(id => id.provider === 'twitter')) {
+          console.error('Twitter identity not found in session')
           setError('Twitter connection not found. Please try again.')
           setStatus('error')
           return
         }
 
+        console.log('Twitter identity found, refreshing connections...')
+
         // Refresh the connections list
         await loadConnections()
         
+        // Update user's x_connected_at timestamp
+        try {
+          const { data: userData } = await supabase.auth.getUser()
+          if (userData?.user?.id) {
+            const { error: updateError } = await supabase
+              .from('users')
+              .update({ x_connected_at: new Date().toISOString() })
+              .eq('kinde_user_id', userData.user.id)
+            
+            if (updateError) {
+              console.warn('Failed to update x_connected_at:', updateError)
+            }
+          }
+        } catch (err) {
+          console.warn('Error updating x_connected_at:', err)
+        }
+        
         setStatus('success')
+        
+        // Store X connection in localStorage for persistence
+        localStorage.setItem('x_connected', 'true')
+        localStorage.setItem('x_connected_at', new Date().toISOString())
+        
         setTimeout(() => {
           navigate('/')
         }, 2000)
@@ -99,4 +130,4 @@ export default function XCallback() {
       </div>
     </div>
   )
-} 
+}

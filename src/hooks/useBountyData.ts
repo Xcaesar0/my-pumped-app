@@ -113,31 +113,47 @@ export const useBountyData = (walletAddress: string | null) => {
       if (userError) throw userError
 
       // Get referral count (people this user has referred)
-      const { count: referralCount } = await supabase
+      const { count: referralCount, error: referralError } = await supabase
         .from('referral_tracking')
         .select('*', { count: 'exact', head: true })
         .eq('referrer_id', userId)
+        
+      if (referralError) {
+        console.warn('Error fetching referral count:', referralError)
+      }
 
       // Get referrer info (who referred this user)
-      const { data: referralData } = await supabase
+      const { data: referralData, error: referrerError } = await supabase
         .from('referral_tracking')
         .select('referrer:users!referrer_id(username)')
         .eq('referee_id', userId)
         .maybeSingle()
+        
+      if (referrerError) {
+        console.warn('Error fetching referrer info:', referrerError)
+      }
 
       // Calculate global rank
-      const { count: higherRankedCount } = await supabase
+      const { count: higherRankedCount, error: rankError } = await supabase
         .from('users')
         .select('*', { count: 'exact', head: true })
         .gt('current_points', user.current_points)
+        
+      if (rankError) {
+        console.warn('Error calculating global rank:', rankError)
+      }
 
       const globalRank = (higherRankedCount || 0) + 1
 
       // Get point breakdown from point_awards
-      const { data: pointAwards } = await supabase
+      const { data: pointAwards, error: pointsError } = await supabase
         .from('point_awards')
         .select('award_type, points_awarded')
         .eq('user_id', userId)
+        
+      if (pointsError) {
+        console.warn('Error fetching point awards:', pointsError)
+      }
 
       let pointsFromReferrals = 0
       let pointsFromSocial = 0
@@ -189,16 +205,26 @@ export const useBountyData = (walletAddress: string | null) => {
       // Get referral counts for each user
       const leaderboardWithReferrals = await Promise.all(
         (leaderboardData || []).map(async (user, index) => {
-          const { count: referralCount } = await supabase
-            .from('referral_tracking')
-            .select('*', { count: 'exact', head: true })
-            .eq('referrer_id', user.id)
+          try {
+            const { count: referralCount } = await supabase
+              .from('referral_tracking')
+              .select('*', { count: 'exact', head: true })
+              .eq('referrer_id', user.id)
 
-          return {
-            username: user.username,
-            points: user.current_points || 0,
-            referrals: referralCount || 0,
-            rank: index + 1
+            return {
+              username: user.username,
+              points: user.current_points || 0,
+              referrals: referralCount || 0,
+              rank: index + 1
+            }
+          } catch (error) {
+            console.warn(`Error fetching referrals for user ${user.id}:`, error)
+            return {
+              username: user.username,
+              points: user.current_points || 0,
+              referrals: 0,
+              rank: index + 1
+            }
           }
         })
       )
@@ -218,11 +244,15 @@ export const useBountyData = (walletAddress: string | null) => {
 
     try {
       // Check user's social connections
-      const { data: socialConnections } = await supabase
+      const { data: socialConnections, error: socialError } = await supabase
         .from('social_connections')
         .select('platform, platform_username')
         .eq('user_id', userId)
         .eq('is_active', true)
+        
+      if (socialError) {
+        console.warn('Error fetching social connections:', socialError)
+      }
 
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
       const xUsername = socialConnections?.find(conn => conn.platform === 'x')?.platform_username || ''
@@ -252,7 +282,7 @@ export const useBountyData = (walletAddress: string | null) => {
           completedTasksFromSubmissions = submissions.map(sub => sub.admin_task_id)
         }
       } catch (error) {
-        console.error('Error loading user task submissions:', error)
+        console.warn('Error loading user task submissions:', error)
         // Continue execution even if this fails
       }
 
@@ -270,7 +300,7 @@ export const useBountyData = (walletAddress: string | null) => {
           }, {} as Record<string, any>)
         }
       } catch (error) {
-        console.error('Error loading admin tasks:', error)
+        console.warn('Error loading admin tasks:', error)
         // Continue execution even if this fails
       }
 
@@ -283,14 +313,14 @@ export const useBountyData = (walletAddress: string | null) => {
           .eq('user_id', userId)
 
         if (xCompletionsError) {
-          console.error('Error loading x_task_completions:', xCompletionsError)
+          console.warn('Error loading x_task_completions:', xCompletionsError)
           // Don't throw, just continue with empty array
         } else {
           completedXTaskTitles = xCompletions?.map(x => x.task_title) || []
           console.log('Completed X task titles:', completedXTaskTitles)
         }
       } catch (error) {
-        console.error('Network error loading x_task_completions:', error)
+        console.warn('Network error loading x_task_completions:', error)
         // Continue with empty array
       }
 
@@ -373,6 +403,11 @@ export const useBountyData = (walletAddress: string | null) => {
       if (task?.action_url) {
         window.open(task.action_url, '_blank')
       }
+      
+      // Save task status to localStorage to persist between refreshes
+      const taskStatuses = JSON.parse(localStorage.getItem('taskStatuses') || '{}')
+      taskStatuses[taskId] = 'in_progress'
+      localStorage.setItem('taskStatuses', JSON.stringify(taskStatuses))
     } catch (error) {
       console.error('Error beginning task:', error)
     }
@@ -427,7 +462,7 @@ export const useBountyData = (walletAddress: string | null) => {
         .maybeSingle()
 
       if (xConnectionError) {
-        console.error('Error fetching X connection:', xConnectionError)
+        console.warn('Error fetching X connection:', xConnectionError)
       }
 
       const xUsernameToUse = xUsername || xConnection?.platform_username || 'unknown'
@@ -463,6 +498,18 @@ export const useBountyData = (walletAddress: string | null) => {
         completed: [...prev.completed, { ...task, status: 'completed' }]
       }))
 
+      // Save completed task to localStorage
+      const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]')
+      if (!completedTasks.includes(taskId)) {
+        completedTasks.push(taskId)
+        localStorage.setItem('completedTasks', JSON.stringify(completedTasks))
+      }
+      
+      // Remove from in-progress tasks
+      const taskStatuses = JSON.parse(localStorage.getItem('taskStatuses') || '{}')
+      delete taskStatuses[taskId]
+      localStorage.setItem('taskStatuses', JSON.stringify(taskStatuses))
+
       // Award points to the user
       try {
         const { error: pointsError } = await supabase.rpc('increment_user_points', {
@@ -490,6 +537,46 @@ export const useBountyData = (walletAddress: string | null) => {
       return { success: false, message: 'An error occurred.' }
     }
   }
+
+  // Load task statuses from localStorage on initial load
+  useEffect(() => {
+    if (!userId) return
+    
+    try {
+      // Load completed tasks
+      const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]')
+      const taskStatuses = JSON.parse(localStorage.getItem('taskStatuses') || '{}')
+      
+      if (completedTasks.length > 0 || Object.keys(taskStatuses).length > 0) {
+        setBountyTasks(prev => {
+          // Apply completed tasks
+          const updatedActive = prev.active.filter(task => !completedTasks.includes(task.id))
+          
+          // Apply in-progress tasks
+          const updatedActiveWithStatus = updatedActive.map(task => {
+            if (taskStatuses[task.id]) {
+              return { ...task, status: taskStatuses[task.id] as any }
+            }
+            return task
+          })
+          
+          // Add completed tasks
+          const newCompleted = [
+            ...prev.completed,
+            ...prev.active.filter(task => completedTasks.includes(task.id))
+              .map(task => ({ ...task, status: 'completed' as const }))
+          ]
+          
+          return {
+            active: updatedActiveWithStatus,
+            completed: newCompleted
+          }
+        })
+      }
+    } catch (error) {
+      console.warn('Error loading task statuses from localStorage:', error)
+    }
+  }, [userId])
 
   const refreshData = async () => {
     await loadAllData()

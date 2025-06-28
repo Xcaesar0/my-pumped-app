@@ -65,8 +65,8 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
 
     // Inject the Telegram login script
     const script = document.createElement('script')
-    script.src = "https://telegram.org/js/telegram-widget.js?22"
     script.async = true
+    script.src = "https://telegram.org/js/telegram-widget.js?22"
     script.setAttribute('data-telegram-login', import.meta.env.VITE_TELEGRAM_BOT_USERNAME || 'Pumpeddotfun_bot')
     script.setAttribute('data-size', 'large')
     script.setAttribute('data-onauth', 'onTelegramAuth(user)')
@@ -136,6 +136,11 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
       const newConnection = await addConnection(connectionData)
       console.log('Connection created successfully:', newConnection)
       
+      // Store Telegram connection in localStorage for persistence
+      localStorage.setItem('telegram_connected', 'true')
+      localStorage.setItem('telegram_user_id', telegramUser.id.toString())
+      localStorage.setItem('telegram_username', telegramUser.username || telegramUser.first_name || `user_${telegramUser.id}`)
+      
       setAuthStatus('success')
       
       // Close modal after a short delay to show success message
@@ -177,7 +182,13 @@ const SocialConnectionModal: React.FC<SocialConnectionModalProps> = ({ user, pla
   const handleDisconnect = async () => {
     if (connection) {
       try {
-        await removeConnection(connection.id)
+        await removeConnection(connection.id, 'telegram')
+        
+        // Remove from localStorage
+        localStorage.removeItem('telegram_connected')
+        localStorage.removeItem('telegram_user_id')
+        localStorage.removeItem('telegram_username')
+        
         onClose()
       } catch (err) {
         console.error('Error disconnecting:', err)
