@@ -16,48 +16,42 @@ serve(async (req) => {
     const { url, method } = req
     console.log(`X-OAuth function called: ${method} ${url}`)
     
-    // Basic X/Twitter OAuth handler
-    if (method === 'GET') {
-      // Handle OAuth callback
-      const urlParams = new URLSearchParams(url.split('?')[1])
-      const code = urlParams.get('code')
-      const state = urlParams.get('state')
+    // Handle POST requests for token exchange
+    if (method === 'POST') {
+      const { code } = await req.json()
       
-      console.log(`Received OAuth callback with code: ${code?.substring(0, 10)}... and state: ${state}`)
-      
-      if (code) {
-        // In a real implementation, you would exchange the code for tokens
-        // For now, return a success response
+      if (!code) {
         return new Response(
-          JSON.stringify({ 
-            success: true, 
-            message: 'OAuth callback received',
-            code: code,
-            state: state 
-          }),
+          JSON.stringify({ error: 'Authorization code is required' }),
           {
             headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-            status: 200,
+            status: 400,
           }
         )
       }
-    }
-
-    if (method === 'POST') {
-      // Handle OAuth token exchange
-      const body = await req.json()
-      console.log('Received token exchange request:', body)
       
-      // In a real implementation, you would exchange the code for tokens
-      // For now, simulate a successful token exchange
+      console.log(`Received code: ${code.substring(0, 10)}...`)
+      
+      // In a real implementation, we would exchange the code for tokens with Twitter
+      // For now, we'll simulate a successful token exchange
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          message: 'OAuth token exchange simulated',
-          access_token: 'simulated_access_token_' + Date.now(),
-          refresh_token: 'simulated_refresh_token_' + Date.now(),
-          expires_in: 3600
+        JSON.stringify({
+          access_token: `simulated_access_token_${Date.now()}`,
+          refresh_token: `simulated_refresh_token_${Date.now()}`,
+          expires_in: 7200,
+          token_type: 'bearer'
         }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      )
+    }
+    
+    // Handle GET requests (should not happen in normal flow)
+    if (method === 'GET') {
+      return new Response(
+        JSON.stringify({ message: 'X OAuth endpoint is working. Use POST to exchange authorization code for tokens.' }),
         {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
           status: 200,

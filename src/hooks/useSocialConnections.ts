@@ -17,45 +17,54 @@ export const useSocialConnections = (userId: string | null) => {
         const identities = session.user.identities || []
         const twitterId = identities.find((id: any) => id.provider === 'twitter')
         setTwitterIdentity(twitterId)
-        
-        // If Twitter identity exists, update localStorage
-        if (twitterId) {
-          localStorage.setItem('x_connected', 'true')
-          localStorage.setItem('x_connected_at', new Date().toISOString())
-          localStorage.setItem('x_username', twitterId.identity_data?.username || 'x_user')
-        }
       } else {
-        // Check localStorage for X connection status
-        const xConnected = localStorage.getItem('x_connected') === 'true'
-        if (xConnected) {
-          // Create a mock Twitter identity for UI purposes
-          setTwitterIdentity({
-            id: 'local-storage-id',
-            identity_data: {
-              username: localStorage.getItem('x_username') || 'x_user'
-            }
-          })
-        } else {
-          setTwitterIdentity(null)
+        // Check database for X connection
+        if (userId) {
+          const { data: xConnection, error: xConnectionError } = await supabase
+            .from('social_connections')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('platform', 'x')
+            .eq('is_active', true)
+            .maybeSingle()
+            
+          if (!xConnectionError && xConnection) {
+            // Create a mock Twitter identity for UI purposes
+            setTwitterIdentity({
+              id: xConnection.platform_user_id,
+              identity_data: {
+                username: xConnection.platform_username
+              }
+            })
+            return
+          }
+          
+          // Check user's x_connected_at timestamp
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('x_connected_at')
+            .eq('id', userId)
+            .single()
+            
+          if (!userError && userData && userData.x_connected_at) {
+            // User has X connected in the database
+            setTwitterIdentity({
+              id: 'db-connection',
+              identity_data: {
+                username: 'x_user'
+              }
+            })
+            return
+          }
         }
+        
+        setTwitterIdentity(null)
       }
     } catch (err) {
       console.error('Error loading Twitter connection:', err)
-      
-      // Fallback to localStorage if auth fails
-      const xConnected = localStorage.getItem('x_connected') === 'true'
-      if (xConnected) {
-        setTwitterIdentity({
-          id: 'local-storage-id',
-          identity_data: {
-            username: localStorage.getItem('x_username') || 'x_user'
-          }
-        })
-      } else {
-        setTwitterIdentity(null)
-      }
+      setTwitterIdentity(null)
     }
-  }, [])
+  }, [userId])
 
   const loadConnections = useCallback(async () => {
     if (!userId || userId === 'undefined') {
@@ -80,15 +89,6 @@ export const useSocialConnections = (userId: string | null) => {
       // Filter out X connections as they're handled by auth
       const nonXConnections = data?.filter(conn => conn.platform !== 'x') || []
       setConnections(nonXConnections)
-
-      // Check if there's an X connection in the database
-      const xConnection = data?.find(conn => conn.platform === 'x')
-      if (xConnection) {
-        // Update localStorage with X connection data
-        localStorage.setItem('x_connected', 'true')
-        localStorage.setItem('x_connected_at', xConnection.connected_at)
-        localStorage.setItem('x_username', xConnection.platform_username)
-      }
 
       // Load Twitter connection from auth
       await loadTwitterConnection()
@@ -116,9 +116,32 @@ export const useSocialConnections = (userId: string | null) => {
       if (session) {
         loadTwitterConnection()
       } else {
-        // Check localStorage before clearing Twitter identity
-        const xConnected = localStorage.getItem('x_connected') === 'true'
-        if (!xConnected) {
+        // Check database before clearing Twitter identity
+        if (userId) {
+          supabase
+            .from('social_connections')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('platform', 'x')
+            .eq('is_active', true)
+            .maybeSingle()
+            .then(({ data: xConnection }) => {
+              if (xConnection) {
+                // Keep Twitter identity if there's a database connection
+                setTwitterIdentity({
+                  id: xConnection.platform_user_id,
+                  identity_data: {
+                    username: xConnection.platform_username
+                  }
+                })
+              } else {
+                setTwitterIdentity(null)
+              }
+            })
+            .catch(() => {
+              setTwitterIdentity(null)
+            })
+        } else {
           setTwitterIdentity(null)
         }
       }
@@ -127,35 +150,27 @@ export const useSocialConnections = (userId: string | null) => {
     return () => {
       subscription.unsubscribe()
     }
-  }, [loadTwitterConnection])
+  }, [loadTwitterConnection, userId])
 
   const getConnectionByPlatform = useCallback((platform: string) => {
     if (platform === 'x') {
-      // Check localStorage first
-      const xConnected = localStorage.getItem('x_connected') === 'true'
-      
-      if (xConnected || twitterIdentity) {
+      // Check for Twitter identity from auth
+      if (twitterIdentity) {
         return {
           platform: 'x',
-          platform_user_id: twitterIdentity?.id || 'local-storage-id',
-          platform_username: twitterIdentity?.identity_data?.username || localStorage.getItem('x_username') || 'x_user',
+          platform_user_id: twitterIdentity.id,
+          platform_username: twitterIdentity.identity_data?.username || 'x_user',
           is_active: true
         }
       }
+      
+      // Check database connections
+      const xConnection = connections.find(conn => conn.platform === 'x')
+      if (xConnection) {
+        return xConnection
+      }
+      
       return null
-    }
-    
-    // For Telegram, check localStorage first
-    if (platform === 'telegram') {
-      const telegramConnected = localStorage.getItem('telegram_connected') === 'true'
-      if (telegramConnected) {
-        return {
-          platform: 'telegram',
-          platform_user_id: localStorage.getItem('telegram_user_id') || 'local-storage-id',
-          platform_username: localStorage.getItem('telegram_username') || 'telegram_user',
-          is_active: true
-        }
-      }
     }
     
     return connections.find(conn => conn.platform === platform)
@@ -173,11 +188,6 @@ export const useSocialConnections = (userId: string | null) => {
         const { error } = await supabase.auth.signOut()
         if (error) throw error
         setTwitterIdentity(null)
-        
-        // Clear localStorage
-        localStorage.removeItem('x_connected')
-        localStorage.removeItem('x_connected_at')
-        localStorage.removeItem('x_username')
         
         // If user ID is available, also update the database
         if (userId) {
@@ -198,16 +208,6 @@ export const useSocialConnections = (userId: string | null) => {
             console.warn('Error updating database after X disconnection:', dbError)
           }
         }
-      } else if (platform === 'telegram') {
-        // For Telegram, use existing deletion
-        await deleteSocialConnection(connectionId)
-        
-        // Clear localStorage
-        localStorage.removeItem('telegram_connected')
-        localStorage.removeItem('telegram_user_id')
-        localStorage.removeItem('telegram_username')
-        
-        await loadConnections()
       } else {
         // For other platforms, use existing deletion
         await deleteSocialConnection(connectionId)
@@ -253,13 +253,15 @@ export const useSocialConnections = (userId: string | null) => {
         
         console.log('X connection created in database:', data)
         
-        // Store X connection in localStorage for persistence
-        localStorage.setItem('x_connected', 'true')
-        localStorage.setItem('x_connected_at', new Date().toISOString())
-        localStorage.setItem('x_username', connection.platform_username)
-        
-        // Refresh Twitter identity
-        await loadTwitterConnection()
+        // Update user's x_connected_at timestamp
+        const { error: updateError } = await supabase
+          .from('users')
+          .update({ x_connected_at: new Date().toISOString() })
+          .eq('id', connection.user_id)
+          
+        if (updateError) {
+          console.warn('Error updating x_connected_at:', updateError)
+        }
         
         // Process social connection points
         try {
@@ -277,15 +279,13 @@ export const useSocialConnections = (userId: string | null) => {
           console.warn('Error calling process_social_connection_points:', pointsError)
         }
         
+        // Refresh Twitter identity
+        await loadTwitterConnection()
+        
         return data
       }
       
       if (connection.platform === 'telegram') {
-        // Store Telegram connection in localStorage for persistence
-        localStorage.setItem('telegram_connected', 'true')
-        localStorage.setItem('telegram_user_id', connection.platform_user_id)
-        localStorage.setItem('telegram_username', connection.platform_username)
-        
         // Create connection in database
         const upsertedConnection = await createSocialConnection(connection)
         
@@ -350,10 +350,7 @@ export const useSocialConnections = (userId: string | null) => {
 
   const isConnected = (platform: 'telegram' | 'x') => {
     if (platform === 'x') {
-      return !!twitterIdentity || localStorage.getItem('x_connected') === 'true'
-    }
-    if (platform === 'telegram') {
-      return !!getConnectionByPlatform(platform) || localStorage.getItem('telegram_connected') === 'true'
+      return !!twitterIdentity || !!connections.find(conn => conn.platform === 'x')
     }
     return !!getConnectionByPlatform(platform)
   }

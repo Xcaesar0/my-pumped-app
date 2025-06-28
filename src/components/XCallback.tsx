@@ -101,10 +101,45 @@ export default function XCallback() {
           if (address) {
             setDebugInfo(prev => `${prev}\nAttempting fallback connection method...`)
             
-            // Create a manual X connection in localStorage
-            localStorage.setItem('x_connected', 'true')
-            localStorage.setItem('x_connected_at', new Date().toISOString())
-            localStorage.setItem('x_username', 'x_user')
+            // Create a manual X connection in database
+            try {
+              const normalizedAddress = address.toLowerCase()
+              const { data: userData, error: userError } = await supabase
+                .from('users')
+                .select('id')
+                .eq('wallet_address', normalizedAddress)
+                .single()
+                
+              if (userError) {
+                console.error('Error fetching user by wallet address:', userError)
+                setDebugInfo(prev => `${prev}\nError fetching user: ${userError.message}`)
+              } else if (userData) {
+                // Update user's x_connected_at timestamp
+                await supabase
+                  .from('users')
+                  .update({ x_connected_at: new Date().toISOString() })
+                  .eq('id', userData.id)
+                  
+                // Create social connection in database
+                await supabase
+                  .from('social_connections')
+                  .upsert({
+                    user_id: userData.id,
+                    platform: 'x',
+                    platform_user_id: 'manual-id',
+                    platform_username: 'x_user',
+                    is_active: true,
+                    connected_at: new Date().toISOString()
+                  }, {
+                    onConflict: 'user_id,platform'
+                  })
+                  
+                setDebugInfo(prev => `${prev}\nCreated manual X connection in database`)
+              }
+            } catch (dbError) {
+              console.error('Database error:', dbError)
+              setDebugInfo(prev => `${prev}\nDatabase error: ${dbError.message}`)
+            }
             
             setStatus('success')
             setTimeout(() => {
@@ -178,11 +213,6 @@ export default function XCallback() {
         // Refresh the connections list
         await loadConnections()
         
-        // Store X connection in localStorage for persistence
-        localStorage.setItem('x_connected', 'true')
-        localStorage.setItem('x_connected_at', new Date().toISOString())
-        localStorage.setItem('x_username', platformUsername)
-        
         setStatus('success')
         
         setTimeout(() => {
@@ -230,10 +260,54 @@ export default function XCallback() {
           <div className="flex flex-col space-y-3">
             <button
               onClick={() => {
-                // Fallback: Create a manual X connection
-                localStorage.setItem('x_connected', 'true')
-                localStorage.setItem('x_connected_at', new Date().toISOString())
-                localStorage.setItem('x_username', 'x_user')
+                // Create a manual X connection in database
+                if (address) {
+                  const normalizedAddress = address.toLowerCase()
+                  
+                  // First update the user's x_connected_at timestamp
+                  supabase
+                    .from('users')
+                    .select('id')
+                    .eq('wallet_address', normalizedAddress)
+                    .single()
+                    .then(({ data: userData }) => {
+                      if (userData) {
+                        // Update user's x_connected_at timestamp
+                        supabase
+                          .from('users')
+                          .update({ x_connected_at: new Date().toISOString() })
+                          .eq('id', userData.id)
+                          .then(() => {
+                            // Create social connection
+                            supabase
+                              .from('social_connections')
+                              .upsert({
+                                user_id: userData.id,
+                                platform: 'x',
+                                platform_user_id: 'manual-id',
+                                platform_username: 'x_user',
+                                is_active: true,
+                                connected_at: new Date().toISOString()
+                              }, {
+                                onConflict: 'user_id,platform'
+                              })
+                              .then(() => {
+                                console.log('Manual X connection created in database')
+                              })
+                              .catch(err => {
+                                console.error('Error creating manual X connection:', err)
+                              })
+                          })
+                          .catch(err => {
+                            console.error('Error updating x_connected_at:', err)
+                          })
+                      }
+                    })
+                    .catch(err => {
+                      console.error('Error fetching user:', err)
+                    })
+                }
+                
                 navigate('/')
               }}
               className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg"

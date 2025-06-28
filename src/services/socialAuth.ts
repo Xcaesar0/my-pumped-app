@@ -177,31 +177,19 @@ export const disconnectTwitter = async (): Promise<void> => {
     if (error) {
       throw error
     }
-    
-    // Also clear localStorage
-    localStorage.removeItem('x_connected')
-    localStorage.removeItem('x_connected_at')
-    localStorage.removeItem('x_username')
   } catch (error) {
     console.error('Error disconnecting Twitter:', error)
     throw error
   }
 }
 
-// Check Twitter connection - Now checks auth session and localStorage
+// Check Twitter connection - Now checks auth session
 export const checkTwitterConnection = async (): Promise<boolean> => {
   try {
-    // Check localStorage first (faster)
-    if (localStorage.getItem('x_connected') === 'true') {
-      return true
-    }
-    
-    // Then check auth session
     const { data: { session } } = await supabase.auth.getSession()
     return !!session?.user?.identities?.some(id => id.provider === 'twitter')
   } catch (error) {
     console.error('Error checking Twitter connection:', error)
-    // Fallback to localStorage
-    return localStorage.getItem('x_connected') === 'true'
+    return false
   }
 }

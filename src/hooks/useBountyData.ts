@@ -257,17 +257,7 @@ export const useBountyData = (walletAddress: string | null) => {
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
       const xUsername = socialConnections?.find(conn => conn.platform === 'x')?.platform_username || ''
 
-      // Check localStorage for X connection
-      if (localStorage.getItem('x_connected') === 'true' && !connectedPlatforms.includes('x')) {
-        connectedPlatforms.push('x')
-      }
-      
-      // Check localStorage for Telegram connection
-      if (localStorage.getItem('telegram_connected') === 'true' && !connectedPlatforms.includes('telegram')) {
-        connectedPlatforms.push('telegram')
-      }
-
-      // Get user data for username
+      // Get user data for username and X connection status
       const { data: userData, error: userError } = await supabase
         .from('users')
         .select('username, x_connected_at')
@@ -284,7 +274,7 @@ export const useBountyData = (walletAddress: string | null) => {
         connectedPlatforms.push('x')
       }
 
-      // Fetch completed X tasks from x_task_completions with error handling
+      // Fetch completed X tasks from x_task_completions
       let completedXTaskTitles: string[] = []
       try {
         const { data: xCompletions, error: xCompletionsError } = await supabase
@@ -294,14 +284,41 @@ export const useBountyData = (walletAddress: string | null) => {
 
         if (xCompletionsError) {
           console.warn('Error loading x_task_completions:', xCompletionsError)
-          // Don't throw, just continue with empty array
         } else {
           completedXTaskTitles = xCompletions?.map(x => x.task_title) || []
           console.log('Completed X task titles from database:', completedXTaskTitles)
         }
       } catch (error) {
         console.warn('Network error loading x_task_completions:', error)
-        // Continue with empty array
+      }
+
+      // Fetch completed tasks from user_task_submissions
+      let completedTaskIds: string[] = []
+      try {
+        const { data: taskSubmissions, error: submissionsError } = await supabase
+          .from('user_task_submissions')
+          .select('admin_task_id')
+          .eq('user_id', userId)
+          .eq('status', 'approved')
+          
+        if (submissionsError) {
+          console.warn('Error loading user_task_submissions:', submissionsError)
+        } else {
+          completedTaskIds = taskSubmissions?.map(sub => sub.admin_task_id) || []
+          console.log('Completed task IDs from database:', completedTaskIds)
+        }
+      } catch (error) {
+        console.warn('Network error loading user_task_submissions:', error)
+      }
+
+      // Fetch all admin tasks
+      const { data: adminTasks, error: adminTasksError } = await supabase
+        .from('admin_tasks')
+        .select('*')
+        .eq('is_active', true)
+        
+      if (adminTasksError) {
+        console.warn('Error loading admin_tasks:', adminTasksError)
       }
 
       // Define available tasks
@@ -341,24 +358,16 @@ export const useBountyData = (walletAddress: string | null) => {
         }
       ]
 
-      // Load completed tasks from localStorage
-      const completedTasksFromStorage = JSON.parse(localStorage.getItem('completedTasks') || '[]')
+      // Load task statuses from localStorage (only for in-progress tasks)
       const taskStatusesFromStorage = JSON.parse(localStorage.getItem('taskStatuses') || '{}')
       
-      console.log('Completed tasks from localStorage:', completedTasksFromStorage)
       console.log('Task statuses from localStorage:', taskStatusesFromStorage)
 
-      // Update task statuses based on DB completions, localStorage, and user's connections
+      // Update task statuses based on DB completions and user's connections
       const updatedTasks = allTasks.map(task => {
         // Check if task is completed based on X task completions
         if (task.platform === 'x' && completedXTaskTitles.includes(task.title)) {
           console.log(`Task ${task.title} is completed based on database record`)
-          return { ...task, status: 'completed' as const }
-        }
-        
-        // Check if task is completed based on localStorage
-        if (completedTasksFromStorage.includes(task.id)) {
-          console.log(`Task ${task.title} is completed based on localStorage`)
           return { ...task, status: 'completed' as const }
         }
         
@@ -372,6 +381,15 @@ export const useBountyData = (walletAddress: string | null) => {
         if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
           console.log(`Task ${task.title} is completed based on Telegram connection`)
           return { ...task, status: 'completed' as const }
+        }
+        
+        // Check if task is completed based on admin task submissions
+        if (adminTasks) {
+          const matchingAdminTask = adminTasks.find(at => at.title === task.title)
+          if (matchingAdminTask && completedTaskIds.includes(matchingAdminTask.id)) {
+            console.log(`Task ${task.title} is completed based on admin task submission`)
+            return { ...task, status: 'completed' as const }
+          }
         }
         
         return task
@@ -464,10 +482,9 @@ export const useBountyData = (walletAddress: string | null) => {
         console.warn('Error fetching X connection:', xConnectionError)
       }
 
-      // Use provided xUsername, or get from connection, or from localStorage, or default to 'unknown'
+      // Use provided xUsername, or get from connection, or default to 'unknown'
       const xUsernameToUse = xUsername || 
                             xConnection?.platform_username || 
-                            localStorage.getItem('x_username') || 
                             'unknown'
                             
       console.log('X username for task completion:', xUsernameToUse)
@@ -498,11 +515,13 @@ export const useBountyData = (walletAddress: string | null) => {
 
           if (xTaskError) {
             console.error('Error inserting X task completion:', xTaskError)
-            
-            // If database operations fail, just use localStorage
-            console.log('Using localStorage fallback for task completion')
-          } else {
-            console.log('Successfully inserted X task completion directly')
+            setBountyTasks(prev => ({
+              ...prev,
+              active: prev.active.map(task =>
+                task.id === taskId ? { ...task, status: 'in_progress' } : task
+              )
+            }))
+            return { success: false, message: 'Could not verify task. Please try again.' }
           }
 
           // Award points manually
@@ -514,33 +533,29 @@ export const useBountyData = (walletAddress: string | null) => {
 
             if (pointsError) {
               console.error('Failed to award points:', pointsError)
-            } else {
-              console.log('Successfully awarded points manually')
             }
           } catch (pointsError) {
             console.error('Error calling increment_user_points:', pointsError)
           }
         } catch (fallbackError) {
           console.error('Error in fallback task completion:', fallbackError)
+          setBountyTasks(prev => ({
+            ...prev,
+            active: prev.active.map(task =>
+              task.id === taskId ? { ...task, status: 'in_progress' } : task
+            )
+          }))
+          return { success: false, message: 'Could not verify task. Please try again.' }
         }
-      } else {
-        console.log('Successfully processed X task completion via RPC:', result)
       }
 
-      // 3. Mark as completed in UI and award points
+      // 3. Mark as completed in UI
       setBountyTasks(prev => ({
         active: prev.active.filter(t => t.id !== taskId),
         completed: [...prev.completed, { ...task, status: 'completed' }]
       }))
 
-      // Save completed task to localStorage
-      const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]')
-      if (!completedTasks.includes(taskId)) {
-        completedTasks.push(taskId)
-        localStorage.setItem('completedTasks', JSON.stringify(completedTasks))
-      }
-      
-      // Remove from in-progress tasks
+      // Remove from in-progress tasks in localStorage
       const taskStatuses = JSON.parse(localStorage.getItem('taskStatuses') || '{}')
       delete taskStatuses[taskId]
       localStorage.setItem('taskStatuses', JSON.stringify(taskStatuses))
@@ -562,46 +577,6 @@ export const useBountyData = (walletAddress: string | null) => {
       return { success: false, message: 'An error occurred.' }
     }
   }
-
-  // Load task statuses from localStorage on initial load
-  useEffect(() => {
-    if (!userId) return
-    
-    try {
-      // Load completed tasks
-      const completedTasks = JSON.parse(localStorage.getItem('completedTasks') || '[]')
-      const taskStatuses = JSON.parse(localStorage.getItem('taskStatuses') || '{}')
-      
-      if (completedTasks.length > 0 || Object.keys(taskStatuses).length > 0) {
-        setBountyTasks(prev => {
-          // Apply completed tasks
-          const updatedActive = prev.active.filter(task => !completedTasks.includes(task.id))
-          
-          // Apply in-progress tasks
-          const updatedActiveWithStatus = updatedActive.map(task => {
-            if (taskStatuses[task.id]) {
-              return { ...task, status: taskStatuses[task.id] as any }
-            }
-            return task
-          })
-          
-          // Add completed tasks
-          const newCompleted = [
-            ...prev.completed,
-            ...prev.active.filter(task => completedTasks.includes(task.id))
-              .map(task => ({ ...task, status: 'completed' as const }))
-          ]
-          
-          return {
-            active: updatedActiveWithStatus,
-            completed: newCompleted
-          }
-        })
-      }
-    } catch (error) {
-      console.warn('Error loading task statuses from localStorage:', error)
-    }
-  }, [userId])
 
   const refreshData = async () => {
     await loadAllData()
