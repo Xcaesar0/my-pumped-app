@@ -280,15 +280,15 @@ export const useTaskPersistence = (userId: string | null) => {
       
       // Call the database function to record completion
       const { data, error } = await supabase.rpc('process_x_task_completion', {
-        user_id_param: userId,
         task_title_param: taskTitle,
+        user_id_param: userId,
         x_username_param: xUsername || 'unknown'
       })
 
       if (error) {
         console.error('Error marking task as completed:', error)
         await updateTaskStatus(taskId, 'in_progress') // Revert to in_progress
-        return { success: false, message: 'Failed to complete task' }
+        return { success: false, message: 'Failed to complete task: ' + error.message }
       }
 
       if (data.success) {
