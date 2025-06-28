@@ -7,6 +7,7 @@ import SocialConnectionModal from './SocialConnectionModal'
 import TelegramIcon from './icons/TelegramIcon'
 import XIcon from './icons/XIcon'
 import { supabase } from '../lib/supabase'
+import { initiateTwitterAuth } from '../services/socialAuth'
 
 interface ProfileSettingsModalProps {
   user: User
@@ -26,6 +27,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   
   const [socialModal, setSocialModal] = useState<'telegram' | 'x' | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [isConnectingX, setIsConnectingX] = useState(false)
 
   const telegramConnection = getConnectionByPlatform('telegram')
   const xConnection = getConnectionByPlatform('x')
@@ -46,6 +48,12 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
         // For Twitter, use auth signOut
         const { error: signOutError } = await supabase.auth.signOut()
         if (signOutError) throw signOutError
+        
+        // Also remove from localStorage
+        localStorage.removeItem('x_connected')
+        localStorage.removeItem('x_connected_at')
+        localStorage.removeItem('x_username')
+        
         await loadConnections()
       } else {
         // For other platforms, use existing connection removal
@@ -63,19 +71,15 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
   const handleConnectX = async () => {
     try {
       setError(null)
-      const { error: authError } = await supabase.auth.signInWithOAuth({
-        provider: 'twitter',
-        options: {
-          redirectTo: `${window.location.origin}/callback`
-        }
-      })
-      if (authError) {
-        console.error('Error starting Twitter OAuth:', authError)
-        setError('Failed to start X connection. Please try again.')
-      }
+      setIsConnectingX(true)
+      
+      await initiateTwitterAuth()
+      
+      // Note: The page will redirect to the callback URL, so we don't need to handle success here
     } catch (err) {
       console.error('Error initiating X connection:', err)
       setError('Failed to start X connection. Please try again.')
+      setIsConnectingX(false)
     }
   }
 
@@ -156,10 +160,12 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <XIcon className="w-5 h-5 text-white" />
                   <span className="text-sm font-medium text-white">X (Twitter)</span>
                 </div>
-                {connectionsLoading ? (
+                {connectionsLoading || isConnectingX ? (
                   <div className="flex items-center space-x-2">
                     <div className="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
-                    <span className="text-xs text-gray-400">Loading...</span>
+                    <span className="text-xs text-gray-400">
+                      {isConnectingX ? 'Connecting...' : 'Loading...'}
+                    </span>
                   </div>
                 ) : xConnection ? (
                   <div className="flex items-center space-x-2">
@@ -176,7 +182,7 @@ const ProfileSettingsModal: React.FC<ProfileSettingsModalProps> = ({ user, onClo
                   <button
                     onClick={handleConnectX}
                     className="px-3 py-1 text-xs font-medium bg-green-500 text-white rounded-md hover:bg-green-600"
-                    disabled={connectionsLoading}
+                    disabled={connectionsLoading || isConnectingX}
                   >
                     Connect
                   </button>

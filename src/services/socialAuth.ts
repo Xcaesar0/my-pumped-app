@@ -5,10 +5,6 @@ import { supabase } from '../lib/supabase'
 // Telegram Bot Configuration
 const TELEGRAM_BOT_USERNAME = import.meta.env.VITE_TELEGRAM_BOT_USERNAME
 
-// Twitter OAuth Configuration
-const TWITTER_CLIENT_ID = import.meta.env.VITE_TWITTER_CLIENT_ID
-const TWITTER_REDIRECT_URI = import.meta.env.VITE_TWITTER_REDIRECT_URI || `${window.location.origin}/callback`
-
 export interface TelegramAuthResult {
   id: number
   username: string
@@ -139,44 +135,73 @@ export const updateUsername = async (userId: string, newUsername: string) => {
 }
 
 export const initiateTwitterAuth = async () => {
-  if (!TWITTER_CLIENT_ID) {
-    throw new Error('Twitter client ID not configured')
-  }
+  try {
+    console.log('Initiating Twitter auth...')
+    
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'twitter',
+      options: {
+        redirectTo: `${window.location.origin}/callback`,
+        skipBrowserRedirect: false
+      }
+    })
 
-  const { error } = await supabase.auth.signInWithOAuth({
-    provider: 'twitter',
-    options: {
-      redirectTo: `${window.location.origin}/callback`,
-      skipBrowserRedirect: false
+    if (error) {
+      console.error('Twitter auth error:', error)
+      throw error
     }
-  })
-
-  if (error) {
+    
+    console.log('Twitter auth initiated:', data)
+    return data
+  } catch (error) {
+    console.error('Error initiating Twitter auth:', error)
     throw error
   }
 }
 
 // Function to validate Twitter callback data
 export const validateTwitterCallback = async (): Promise<boolean> => {
-  const { data: { session } } = await supabase.auth.getSession()
-  return !!session?.user?.identities?.some(id => id.provider === 'twitter')
-}
-
-// Create social connection from Twitter data - No longer needed as we use auth table
-export const createSocialConnectionFromTwitter = async () => {
-  throw new Error('This function is deprecated. Twitter connections are now handled by Supabase Auth.')
+  try {
+    const { data: { session } } = await supabase.auth.getSession()
+    return !!session?.user?.identities?.some(id => id.provider === 'twitter')
+  } catch (error) {
+    console.error('Error validating Twitter callback:', error)
+    return false
+  }
 }
 
 // Disconnect Twitter - Now uses auth.signOut()
 export const disconnectTwitter = async (): Promise<void> => {
-  const { error } = await supabase.auth.signOut()
-  if (error) {
+  try {
+    const { error } = await supabase.auth.signOut()
+    if (error) {
+      throw error
+    }
+    
+    // Also clear localStorage
+    localStorage.removeItem('x_connected')
+    localStorage.removeItem('x_connected_at')
+    localStorage.removeItem('x_username')
+  } catch (error) {
+    console.error('Error disconnecting Twitter:', error)
     throw error
   }
 }
 
-// Check Twitter connection - Now checks auth session
+// Check Twitter connection - Now checks auth session and localStorage
 export const checkTwitterConnection = async (): Promise<boolean> => {
-  const { data: { session } } = await supabase.auth.getSession()
-  return !!session?.user?.identities?.some(id => id.provider === 'twitter')
+  try {
+    // Check localStorage first (faster)
+    if (localStorage.getItem('x_connected') === 'true') {
+      return true
+    }
+    
+    // Then check auth session
+    const { data: { session } } = await supabase.auth.getSession()
+    return !!session?.user?.identities?.some(id => id.provider === 'twitter')
+  } catch (error) {
+    console.error('Error checking Twitter connection:', error)
+    // Fallback to localStorage
+    return localStorage.getItem('x_connected') === 'true'
+  }
 }
