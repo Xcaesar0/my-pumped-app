@@ -17,6 +17,13 @@ export const useSocialConnections = (userId: string | null) => {
         const identities = session.user.identities || []
         const twitterId = identities.find((id: any) => id.provider === 'twitter')
         setTwitterIdentity(twitterId)
+        
+        // If Twitter identity exists, update localStorage
+        if (twitterId) {
+          localStorage.setItem('x_connected', 'true')
+          localStorage.setItem('x_connected_at', new Date().toISOString())
+          localStorage.setItem('x_username', twitterId.identity_data?.username || 'x_user')
+        }
       } else {
         // Check localStorage for X connection status
         const xConnected = localStorage.getItem('x_connected') === 'true'
@@ -61,16 +68,27 @@ export const useSocialConnections = (userId: string | null) => {
     setError(null)
 
     try {
-      // Only load non-Twitter connections from social_connections table
+      // Load all connections from social_connections table
       const { data, error } = await supabase
         .from('social_connections')
         .select('*')
         .eq('user_id', userId)
         .eq('is_active', true)
-        .neq('platform', 'x')
 
       if (error) throw error
-      setConnections(data || [])
+      
+      // Filter out X connections as they're handled by auth
+      const nonXConnections = data?.filter(conn => conn.platform !== 'x') || []
+      setConnections(nonXConnections)
+
+      // Check if there's an X connection in the database
+      const xConnection = data?.find(conn => conn.platform === 'x')
+      if (xConnection) {
+        // Update localStorage with X connection data
+        localStorage.setItem('x_connected', 'true')
+        localStorage.setItem('x_connected_at', xConnection.connected_at)
+        localStorage.setItem('x_username', xConnection.platform_username)
+      }
 
       // Load Twitter connection from auth
       await loadTwitterConnection()
@@ -160,6 +178,26 @@ export const useSocialConnections = (userId: string | null) => {
         localStorage.removeItem('x_connected')
         localStorage.removeItem('x_connected_at')
         localStorage.removeItem('x_username')
+        
+        // If user ID is available, also update the database
+        if (userId) {
+          try {
+            // Update user's x_connected_at to null
+            await supabase
+              .from('users')
+              .update({ x_connected_at: null })
+              .eq('id', userId)
+              
+            // Delete any X connections in social_connections table
+            await supabase
+              .from('social_connections')
+              .delete()
+              .eq('user_id', userId)
+              .eq('platform', 'x')
+          } catch (dbError) {
+            console.warn('Error updating database after X disconnection:', dbError)
+          }
+        }
       } else if (platform === 'telegram') {
         // For Telegram, use existing deletion
         await deleteSocialConnection(connectionId)
@@ -185,36 +223,106 @@ export const useSocialConnections = (userId: string | null) => {
   }
 
   const addConnection = async (connection: Omit<SocialConnection, 'id' | 'connected_at'>) => {
-    if (connection.platform === 'x') {
-      // Store X connection in localStorage for persistence
-      localStorage.setItem('x_connected', 'true')
-      localStorage.setItem('x_connected_at', new Date().toISOString())
-      localStorage.setItem('x_username', connection.platform_username)
-      
-      // Refresh Twitter identity
-      await loadTwitterConnection()
-      
-      // Return a mock connection
-      return {
-        id: 'local-storage-id',
-        user_id: connection.user_id,
-        platform: 'x',
-        platform_user_id: connection.platform_user_id,
-        platform_username: connection.platform_username,
-        connected_at: new Date().toISOString(),
-        is_active: true
-      } as SocialConnection
-    }
-    
-    if (connection.platform === 'telegram') {
-      // Store Telegram connection in localStorage for persistence
-      localStorage.setItem('telegram_connected', 'true')
-      localStorage.setItem('telegram_user_id', connection.platform_user_id)
-      localStorage.setItem('telegram_username', connection.platform_username)
-    }
-
     setLoading(true)
+    setError(null)
+    
     try {
+      if (connection.platform === 'x') {
+        console.log('Adding X connection to database:', connection)
+        
+        // Create X connection in database
+        const { data, error } = await supabase
+          .from('social_connections')
+          .upsert({
+            user_id: connection.user_id,
+            platform: 'x',
+            platform_user_id: connection.platform_user_id,
+            platform_username: connection.platform_username,
+            is_active: true,
+            connected_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id,platform'
+          })
+          .select()
+          .single()
+          
+        if (error) {
+          console.error('Error creating X connection in database:', error)
+          throw error
+        }
+        
+        console.log('X connection created in database:', data)
+        
+        // Store X connection in localStorage for persistence
+        localStorage.setItem('x_connected', 'true')
+        localStorage.setItem('x_connected_at', new Date().toISOString())
+        localStorage.setItem('x_username', connection.platform_username)
+        
+        // Refresh Twitter identity
+        await loadTwitterConnection()
+        
+        // Process social connection points
+        try {
+          const { data: pointsData, error: pointsError } = await supabase.rpc('process_social_connection_points', {
+            user_id_param: connection.user_id,
+            platform_param: 'x'
+          })
+          
+          if (pointsError) {
+            console.warn('Error processing social connection points:', pointsError)
+          } else {
+            console.log('Social connection points processed:', pointsData)
+          }
+        } catch (pointsError) {
+          console.warn('Error calling process_social_connection_points:', pointsError)
+        }
+        
+        return data
+      }
+      
+      if (connection.platform === 'telegram') {
+        // Store Telegram connection in localStorage for persistence
+        localStorage.setItem('telegram_connected', 'true')
+        localStorage.setItem('telegram_user_id', connection.platform_user_id)
+        localStorage.setItem('telegram_username', connection.platform_username)
+        
+        // Create connection in database
+        const upsertedConnection = await createSocialConnection(connection)
+        
+        // Process social connection points
+        try {
+          const { data: pointsData, error: pointsError } = await supabase.rpc('process_social_connection_points', {
+            user_id_param: connection.user_id,
+            platform_param: 'telegram'
+          })
+          
+          if (pointsError) {
+            console.warn('Error processing social connection points:', pointsError)
+          } else {
+            console.log('Social connection points processed:', pointsData)
+          }
+        } catch (pointsError) {
+          console.warn('Error calling process_social_connection_points:', pointsError)
+        }
+        
+        setConnections(prev => {
+          const existingIndex = prev.findIndex(
+            conn => conn.user_id === connection.user_id && conn.platform === connection.platform
+          )
+          
+          if (existingIndex >= 0) {
+            const updated = [...prev]
+            updated[existingIndex] = upsertedConnection
+            return updated
+          } else {
+            return [...prev, upsertedConnection]
+          }
+        })
+
+        return upsertedConnection
+      }
+      
+      // For other platforms
       const upsertedConnection = await createSocialConnection(connection)
       setConnections(prev => {
         const existingIndex = prev.findIndex(
@@ -233,6 +341,7 @@ export const useSocialConnections = (userId: string | null) => {
       return upsertedConnection
     } catch (err) {
       console.error('Error adding social connection:', err)
+      setError('Failed to add social connection')
       throw err
     } finally {
       setLoading(false)

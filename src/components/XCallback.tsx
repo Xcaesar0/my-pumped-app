@@ -2,12 +2,14 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { useSocialConnections } from '../hooks/useSocialConnections'
+import { useAccount } from 'wagmi'
 
 export default function XCallback() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const [error, setError] = useState<string>('')
   const navigate = useNavigate()
-  const { loadConnections } = useSocialConnections(null)
+  const { loadConnections, addConnection } = useSocialConnections(null)
+  const { address } = useAccount()
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -52,31 +54,66 @@ export default function XCallback() {
 
         console.log('Twitter identity found, refreshing connections...')
 
-        // Refresh the connections list
-        await loadConnections()
-        
-        // Update user's x_connected_at timestamp
-        try {
-          const { data: userData } = await supabase.auth.getUser()
-          if (userData?.user?.id) {
-            const { error: updateError } = await supabase
-              .from('users')
-              .update({ x_connected_at: new Date().toISOString() })
-              .eq('kinde_user_id', userData.user.id)
+        // Get Twitter identity data
+        const twitterIdentity = session.user.identities.find(id => id.provider === 'twitter')
+        const platformUserId = twitterIdentity?.id || ''
+        const platformUsername = twitterIdentity?.identity_data?.username || 'x_user'
+
+        // Get user ID from wallet address
+        if (address) {
+          const normalizedAddress = address.toLowerCase()
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('id')
+            .eq('wallet_address', normalizedAddress)
+            .single()
+
+          if (userError) {
+            console.error('Error fetching user by wallet address:', userError)
+          } else if (userData) {
+            console.log('Found user ID:', userData.id)
             
-            if (updateError) {
-              console.warn('Failed to update x_connected_at:', updateError)
+            // Create social connection in database
+            try {
+              await addConnection({
+                user_id: userData.id,
+                platform: 'x',
+                platform_user_id: platformUserId,
+                platform_username: platformUsername,
+                is_active: true
+              })
+              console.log('X connection added successfully')
+            } catch (connError) {
+              console.error('Error adding X connection:', connError)
+            }
+            
+            // Update user's x_connected_at timestamp
+            try {
+              const { error: updateError } = await supabase
+                .from('users')
+                .update({ x_connected_at: new Date().toISOString() })
+                .eq('id', userData.id)
+              
+              if (updateError) {
+                console.warn('Failed to update x_connected_at:', updateError)
+              } else {
+                console.log('Updated x_connected_at timestamp')
+              }
+            } catch (err) {
+              console.warn('Error updating x_connected_at:', err)
             }
           }
-        } catch (err) {
-          console.warn('Error updating x_connected_at:', err)
         }
-        
-        setStatus('success')
+
+        // Refresh the connections list
+        await loadConnections()
         
         // Store X connection in localStorage for persistence
         localStorage.setItem('x_connected', 'true')
         localStorage.setItem('x_connected_at', new Date().toISOString())
+        localStorage.setItem('x_username', platformUsername)
+        
+        setStatus('success')
         
         setTimeout(() => {
           navigate('/')
@@ -89,7 +126,7 @@ export default function XCallback() {
     }
 
     handleCallback()
-  }, [navigate, loadConnections])
+  }, [navigate, loadConnections, addConnection, address])
 
   if (status === 'loading') {
     return (

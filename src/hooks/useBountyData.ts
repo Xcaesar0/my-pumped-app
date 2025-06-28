@@ -257,10 +257,20 @@ export const useBountyData = (walletAddress: string | null) => {
       const connectedPlatforms = socialConnections?.map(conn => conn.platform) || []
       const xUsername = socialConnections?.find(conn => conn.platform === 'x')?.platform_username || ''
 
+      // Check localStorage for X connection
+      if (localStorage.getItem('x_connected') === 'true' && !connectedPlatforms.includes('x')) {
+        connectedPlatforms.push('x')
+      }
+      
+      // Check localStorage for Telegram connection
+      if (localStorage.getItem('telegram_connected') === 'true' && !connectedPlatforms.includes('telegram')) {
+        connectedPlatforms.push('telegram')
+      }
+
       // Get user data for username
       const { data: userData, error: userError } = await supabase
         .from('users')
-        .select('username')
+        .select('username, x_connected_at')
         .eq('id', userId)
         .single()
 
@@ -269,39 +279,9 @@ export const useBountyData = (walletAddress: string | null) => {
         throw userError
       }
 
-      // Try to fetch completed tasks from user_task_submissions
-      let completedTasksFromSubmissions: string[] = []
-      try {
-        const { data: submissions, error: submissionsError } = await supabase
-          .from('user_task_submissions')
-          .select('admin_task_id, status')
-          .eq('user_id', userId)
-          .eq('status', 'approved')
-
-        if (!submissionsError && submissions) {
-          completedTasksFromSubmissions = submissions.map(sub => sub.admin_task_id)
-        }
-      } catch (error) {
-        console.warn('Error loading user task submissions:', error)
-        // Continue execution even if this fails
-      }
-
-      // Try to fetch admin tasks
-      let adminTasksMap: Record<string, any> = {}
-      try {
-        const { data: adminTasks, error: adminTasksError } = await supabase
-          .from('admin_tasks')
-          .select('id, title, platform')
-
-        if (!adminTasksError && adminTasks) {
-          adminTasksMap = adminTasks.reduce((acc, task) => {
-            acc[task.id] = task
-            return acc
-          }, {} as Record<string, any>)
-        }
-      } catch (error) {
-        console.warn('Error loading admin tasks:', error)
-        // Continue execution even if this fails
+      // If user has x_connected_at timestamp, consider X connected
+      if (userData.x_connected_at && !connectedPlatforms.includes('x')) {
+        connectedPlatforms.push('x')
       }
 
       // Fetch completed X tasks from x_task_completions with error handling
@@ -361,16 +341,28 @@ export const useBountyData = (walletAddress: string | null) => {
         }
       ]
 
-      // Update task statuses based on DB completions and user's connections
+      // Load completed tasks from localStorage
+      const completedTasksFromStorage = JSON.parse(localStorage.getItem('completedTasks') || '[]')
+      const taskStatusesFromStorage = JSON.parse(localStorage.getItem('taskStatuses') || '{}')
+
+      // Update task statuses based on DB completions, localStorage, and user's connections
       const updatedTasks = allTasks.map(task => {
         // Check if task is completed based on X task completions
         if (task.platform === 'x' && completedXTaskTitles.includes(task.title)) {
           return { ...task, status: 'completed' as const }
         }
         
-        // Check if task is completed based on user_task_submissions
-        // This would require mapping task.id to admin_task_id which we don't have
-        // For now, we'll just check if the user has the required connection for auto-completion
+        // Check if task is completed based on localStorage
+        if (completedTasksFromStorage.includes(task.id)) {
+          return { ...task, status: 'completed' as const }
+        }
+        
+        // Check if task is in progress based on localStorage
+        if (taskStatusesFromStorage[task.id]) {
+          return { ...task, status: taskStatusesFromStorage[task.id] as any }
+        }
+        
+        // Check if task is completed based on user's connections
         if (task.platform === 'telegram' && connectedPlatforms.includes('telegram')) {
           return { ...task, status: 'completed' as const }
         }
@@ -465,31 +457,57 @@ export const useBountyData = (walletAddress: string | null) => {
         console.warn('Error fetching X connection:', xConnectionError)
       }
 
-      const xUsernameToUse = xUsername || xConnection?.platform_username || 'unknown'
+      // Use provided xUsername, or get from connection, or from localStorage, or default to 'unknown'
+      const xUsernameToUse = xUsername || 
+                            xConnection?.platform_username || 
+                            localStorage.getItem('x_username') || 
+                            'unknown'
+                            
       console.log('X username for task completion:', xUsernameToUse)
 
-      // 2. Insert into x_task_completions
-      const { error: xTaskError } = await supabase
-        .from('x_task_completions')
-        .insert([
-          {
-            user_id: userId,
-            username: userData.username,
-            x_username: xUsernameToUse,
-            task_title: task.title,
-            completed_at: new Date().toISOString()
-          }
-        ])
+      // Use the process_x_task_completion function
+      const { data: result, error: processError } = await supabase.rpc('process_x_task_completion', {
+        user_id_param: userId,
+        task_title_param: task.title,
+        x_username_param: xUsernameToUse
+      })
 
-      if (xTaskError) {
-        console.error('Error inserting X task completion:', xTaskError)
-        setBountyTasks(prev => ({
-          ...prev,
-          active: prev.active.map(task =>
-            task.id === taskId ? { ...task, status: 'in_progress' } : task
-          )
-        }))
-        return { success: false, message: 'Could not verify X task. Please try again.' }
+      if (processError) {
+        console.error('Error processing X task completion:', processError)
+        
+        // Fallback to direct insertion if RPC fails
+        const { error: xTaskError } = await supabase
+          .from('x_task_completions')
+          .insert([
+            {
+              user_id: userId,
+              username: userData.username,
+              x_username: xUsernameToUse,
+              task_title: task.title,
+              completed_at: new Date().toISOString()
+            }
+          ])
+
+        if (xTaskError) {
+          console.error('Error inserting X task completion:', xTaskError)
+          setBountyTasks(prev => ({
+            ...prev,
+            active: prev.active.map(task =>
+              task.id === taskId ? { ...task, status: 'in_progress' } : task
+            )
+          }))
+          return { success: false, message: 'Could not verify X task. Please try again.' }
+        }
+
+        // Award points manually
+        const { error: pointsError } = await supabase.rpc('increment_user_points', {
+          user_id_param: userId,
+          points_to_add: task.points
+        })
+
+        if (pointsError) {
+          console.error('Failed to award points:', pointsError)
+        }
       }
 
       // 3. Mark as completed in UI and award points
@@ -510,22 +528,12 @@ export const useBountyData = (walletAddress: string | null) => {
       delete taskStatuses[taskId]
       localStorage.setItem('taskStatuses', JSON.stringify(taskStatuses))
 
-      // Award points to the user
-      try {
-        const { error: pointsError } = await supabase.rpc('increment_user_points', {
-          user_id_param: userId,
-          points_to_add: task.points
-        })
-
-        if (pointsError) {
-          console.error('Failed to award points:', pointsError)
-        }
-      } catch (error) {
-        console.error('Network error awarding points:', error)
-      }
-
       await loadUserStats()
-      return { success: true, message: `Task completed! You earned ${task.points} points.` }
+      return { 
+        success: true, 
+        message: `Task completed! You earned ${task.points} points.`,
+        points: task.points
+      }
     } catch (error) {
       console.error('Error verifying task:', error)
       setBountyTasks(prev => ({
