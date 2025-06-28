@@ -1,0 +1,146 @@
+-- Create function to process X task completions
+CREATE OR REPLACE FUNCTION process_x_task_completion(
+  user_id_param uuid,
+  task_title_param text,
+  x_username_param text DEFAULT 'unknown'
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+AS $$
+DECLARE
+  task_record record;
+  points_awarded integer := 0;
+  username_var text;
+  task_id uuid;
+  completion_id uuid;
+BEGIN
+  -- Get user's username
+  SELECT username INTO username_var
+  FROM users
+  WHERE id = user_id_param;
+  
+  IF username_var IS NULL THEN
+    RETURN jsonb_build_object('success', false, 'error', 'User not found');
+  END IF;
+  
+  -- Check if task already completed
+  IF EXISTS (
+    SELECT 1 FROM x_task_completions
+    WHERE user_id = user_id_param AND task_title = task_title_param
+  ) THEN
+    RETURN jsonb_build_object('success', true, 'message', 'Task already completed', 'points_awarded', 0);
+  END IF;
+  
+  -- Find task in admin_tasks
+  SELECT id, points INTO task_record
+  FROM admin_tasks
+  WHERE title = task_title_param AND platform = 'x' AND is_active = true;
+  
+  -- Set task ID and points
+  IF task_record.id IS NOT NULL THEN
+    task_id := task_record.id;
+    points_awarded := task_record.points;
+  ELSE
+    -- Default points if task not found in admin_tasks
+    CASE task_title_param
+      WHEN 'Follow @pumpeddotfun' THEN points_awarded := 25;
+      WHEN 'Repost Launch Post' THEN points_awarded := 50;
+      ELSE points_awarded := 25;
+    END CASE;
+  END IF;
+  
+  -- Insert task completion
+  INSERT INTO x_task_completions (
+    user_id,
+    username,
+    x_username,
+    task_title
+  ) VALUES (
+    user_id_param,
+    username_var,
+    x_username_param,
+    task_title_param
+  )
+  RETURNING id INTO completion_id;
+  
+  -- Award points
+  UPDATE users
+  SET current_points = current_points + points_awarded
+  WHERE id = user_id_param;
+  
+  -- Create points transaction
+  INSERT INTO points_transactions (
+    user_id,
+    amount,
+    transaction_type,
+    reference_id,
+    description
+  ) VALUES (
+    user_id_param,
+    points_awarded,
+    'task_completion',
+    completion_id,
+    format('Completed X task: %s', task_title_param)
+  );
+  
+  -- If task exists in admin_tasks, create a submission record
+  IF task_id IS NOT NULL THEN
+    INSERT INTO user_task_submissions (
+      user_id,
+      admin_task_id,
+      status,
+      submission_data,
+      reviewed_at
+    ) VALUES (
+      user_id_param,
+      task_id,
+      'approved',
+      jsonb_build_object(
+        'x_username', x_username_param,
+        'task_title', task_title_param,
+        'completion_id', completion_id
+      ),
+      now()
+    )
+    ON CONFLICT (user_id, admin_task_id) 
+    DO UPDATE SET 
+      status = 'approved',
+      reviewed_at = now(),
+      submission_data = jsonb_build_object(
+        'x_username', x_username_param,
+        'task_title', task_title_param,
+        'completion_id', completion_id
+      );
+  END IF;
+  
+  RETURN jsonb_build_object(
+    'success', true,
+    'points_awarded', points_awarded,
+    'completion_id', completion_id,
+    'message', format('Task completed! You earned %s points.', points_awarded)
+  );
+  
+EXCEPTION
+  WHEN OTHERS THEN
+    RAISE WARNING 'Error in process_x_task_completion: %', SQLERRM;
+    RETURN jsonb_build_object(
+      'success', false,
+      'error', format('Error processing X task completion: %s', SQLERRM)
+    );
+END;
+$$;
+
+-- Grant execute permission
+GRANT EXECUTE ON FUNCTION process_x_task_completion(uuid, text, text) TO public;
+
+-- Create index for x_task_completions
+CREATE INDEX IF NOT EXISTS idx_x_task_completions_user_task ON x_task_completions(user_id, task_title);
+
+-- Create policy for x_task_completions
+DROP POLICY IF EXISTS "Public can insert x task completions" ON x_task_completions;
+CREATE POLICY "Public can insert x task completions"
+  ON x_task_completions
+  FOR INSERT
+  TO public
+  WITH CHECK (true);

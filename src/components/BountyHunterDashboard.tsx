@@ -121,13 +121,13 @@ const BountyHunterDashboard: React.FC<BountyHunterDashboardProps> = ({ user }) =
     } else if (task?.status === 'in_progress') {
       // Get X username from social connections for task verification
       const xConnection = getConnectionByPlatform('x')
-      const xUsername = xConnection?.platform_username || 'unknown'
+      const xUsername = xConnection?.platform_username || localStorage.getItem('x_username') || 'unknown'
       
       const result = await verifyTask(taskId, xUsername)
       
       // Show completion message for completed tasks
       if (result?.success) {
-        setTaskCompletionMessage(`Task completed! You earned ${task.points} points.`)
+        setTaskCompletionMessage(`Task completed! You earned ${result.points || task.points} points.`)
         setTimeout(() => setTaskCompletionMessage(null), 4000)
       }
     }
